@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect Four</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: #090d16;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 440px;
+      max-width: 95vw;
+      padding: 10px 16px;
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 8px 8px 0 0;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .status-text { color: #f59e0b; }
+    .board-frame {
+      background: #1e3a8a;
+      border: 3px solid #172554;
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.6);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(7, 52px);
+      grid-template-rows: repeat(6, 52px);
+      gap: 8px;
+    }
+    .slot {
+      background: #090d16;
+      border-radius: 50%;
+      box-shadow: inset 0 3px 6px rgba(0,0,0,0.8);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .slot:hover:not(.filled) {
+      background: #1e293b;
+    }
+    .chip {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+      animation: dropIn 0.22s ease-out;
+    }
+    .chip-1 { background: radial-gradient(circle at 35% 35%, #f87171, #dc2626); }
+    .chip-2 { background: radial-gradient(circle at 35% 35%, #fde047, #ca8a04); }
+    @keyframes dropIn {
+      from { transform: translateY(-160px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .btn {
+      background: #38bdf8;
+      color: #082f49;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn:hover { background: #7dd3fc; }
+  </style>
+</head>
+<body>
+  <div class="hud">
+    <div id="status" class="status-text">Your Turn (Red)</div>
+    <div style="display:flex; gap:8px;">
+      <button id="modeBtn" class="btn" style="background:#1e293b; color:#fff;">VS AI</button>
+      <button id="resetBtn" class="btn">RESET</button>
+    </div>
+  </div>
+  <div class="board-frame">
+    <div id="grid" class="grid"></div>
+  </div>
+
+  <script>
+    const ROWS = 6;
+    const COLS = 7;
+    let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+    let currentPlayer = 1; // 1 = Red (Player), 2 = Yellow (AI/P2)
+    let isVsAi = true;
+    let gameOver = false;
+
+    const gridEl = document.getElementById('grid');
+    const statusEl = document.getElementById('status');
+    const resetBtn = document.getElementById('resetBtn');
+    const modeBtn = document.getElementById('modeBtn');
+
+    function createGrid() {
+      gridEl.innerHTML = '';
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const slot = document.createElement('div');
+          slot.className = 'slot';
+          slot.dataset.col = c;
+          slot.addEventListener('click', () => handleColumnClick(c));
+          gridEl.appendChild(slot);
+        }
+      }
+    }
+
+    function handleColumnClick(col) {
+      if (gameOver) return;
+      if (isVsAi && currentPlayer === 2) return;
+
+      if (dropPiece(col, currentPlayer)) {
+        if (checkWin(currentPlayer)) {
+          endGame(currentPlayer === 1 ? 'Red Wins!' : 'Yellow Wins!');
+          return;
+        }
+        if (isBoardFull()) {
+          endGame('Draw Game!');
+          return;
+        }
+
+        currentPlayer = currentPlayer === 1 ? 2 : 1;
+        updateStatus();
+
+        if (isVsAi && currentPlayer === 2 && !gameOver) {
+          setTimeout(aiMove, 300);
+        }
+      }
+    }
+
+    function dropPiece(col, player) {
+      for (let r = ROWS - 1; r >= 0; r--) {
+        if (board[r][col] === 0) {
+          board[r][col] = player;
+          renderSlot(r, col, player);
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function renderSlot(r, col, player) {
+      const idx = r * COLS + col;
+      const slot = gridEl.children[idx];
+      slot.classList.add('filled');
+      const chip = document.createElement('div');
+      chip.className = `chip chip-${player}`;
+      slot.appendChild(chip);
+    }
+
+    function updateStatus() {
+      if (currentPlayer === 1) {
+        statusEl.textContent = isVsAi ? 'Your Turn (Red)' : "Player 1's Turn (Red)";
+        statusEl.style.color = '#ef4444';
+      } else {
+        statusEl.textContent = isVsAi ? 'AI thinking...' : "Player 2's Turn (Yellow)";
+        statusEl.style.color = '#eab308';
+      }
+    }
+
+    function aiMove() {
+      if (gameOver) return;
+      // 1. Check if AI can win
+      for (let c = 0; c < COLS; c++) {
+        const r = getLowestRow(c);
+        if (r !== -1) {
+          board[r][c] = 2;
+          if (checkWin(2)) {
+            board[r][c] = 0;
+            dropPiece(c, 2);
+            endGame('Yellow (AI) Wins!');
+            return;
+          }
+          board[r][c] = 0;
+        }
+      }
+
+      // 2. Block player win
+      for (let c = 0; c < COLS; c++) {
+        const r = getLowestRow(c);
+        if (r !== -1) {
+          board[r][c] = 1;
+          if (checkWin(1)) {
+            board[r][c] = 0;
+            dropPiece(c, 2);
+            currentPlayer = 1;
+            updateStatus();
+            return;
+          }
+          board[r][c] = 0;
+        }
+      }
+
+      // 3. Prefer center column or random valid
+      const preference = [3, 2, 4, 1, 5, 0, 6];
+      for (const c of preference) {
+        if (getLowestRow(c) !== -1) {
+          dropPiece(c, 2);
+          if (checkWin(2)) {
+            endGame('Yellow (AI) Wins!');
+            return;
+          }
+          if (isBoardFull()) {
+            endGame('Draw Game!');
+            return;
+          }
+          currentPlayer = 1;
+          updateStatus();
+          return;
+        }
+      }
+    }
+
+    function getLowestRow(col) {
+      for (let r = ROWS - 1; r >= 0; r--) {
+        if (board[r][col] === 0) return r;
+      }
+      return -1;
+    }
+
+    function checkWin(p) {
+      // Horizontal
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS - 3; c++) {
+          if (board[r][c] === p && board[r][c+1] === p && board[r][c+2] === p && board[r][c+3] === p) return true;
+        }
+      }
+      // Vertical
+      for (let r = 0; r < ROWS - 3; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (board[r][c] === p && board[r+1][c] === p && board[r+2][c] === p && board[r+3][c] === p) return true;
+        }
+      }
+      // Diagonal down-right
+      for (let r = 0; r < ROWS - 3; r++) {
+        for (let c = 0; c < COLS - 3; c++) {
+          if (board[r][c] === p && board[r+1][c+1] === p && board[r+2][c+2] === p && board[r+3][c+3] === p) return true;
+        }
+      }
+      // Diagonal up-right
+      for (let r = 3; r < ROWS; r++) {
+        for (let c = 0; c < COLS - 3; c++) {
+          if (board[r][c] === p && board[r-1][c+1] === p && board[r-2][c+2] === p && board[r-3][c+3] === p) return true;
+        }
+      }
+      return false;
+    }
+
+    function isBoardFull() {
+      return board[0].every(cell => cell !== 0);
+    }
+
+    function endGame(msg) {
+      gameOver = true;
+      statusEl.textContent = msg;
+      statusEl.style.color = '#10b981';
+    }
+
+    function reset() {
+      board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+      currentPlayer = 1;
+      gameOver = false;
+      updateStatus();
+      createGrid();
+    }
+
+    resetBtn.addEventListener('click', reset);
+    modeBtn.addEventListener('click', () => {
+      isVsAi = !isVsAi;
+      modeBtn.textContent = isVsAi ? 'VS AI' : 'VS 2P';
+      reset();
+    });
+
+    createGrid();
+    updateStatus();
+  </script>
+</body>
+</html>

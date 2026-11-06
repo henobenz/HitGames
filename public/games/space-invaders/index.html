@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space Invaders Defender</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: #090d16;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      width: 480px;
+      max-width: 95vw;
+      padding: 12px 18px;
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 8px 8px 0 0;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .hud span { color: #38bdf8; }
+    #canvas {
+      background: #050811;
+      border: 1px solid #1f2937;
+      border-top: none;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+      border-radius: 0 0 8px 8px;
+    }
+    .controls-hint {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(9, 13, 22, 0.88);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .overlay h2 { font-size: 28px; margin-bottom: 8px; color: #38bdf8; }
+    .overlay p { font-size: 14px; color: #94a3b8; margin-bottom: 20px; text-align: center; max-width: 300px; }
+    .btn {
+      background: #38bdf8;
+      color: #082f49;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 14px;
+      transition: transform 0.1s, background 0.15s;
+    }
+    .btn:hover { background: #7dd3fc; transform: scale(1.03); }
+  </style>
+</head>
+<body>
+  <div class="hud">
+    <div>SCORE: <span id="score">0</span></div>
+    <div>WAVE: <span id="wave">1</span></div>
+    <div>LIVES: <span id="lives">❤❤❤</span></div>
+  </div>
+  <canvas id="canvas" width="480" height="420"></canvas>
+  <div class="controls-hint">Arrow Keys / A-D to Move · Space to Fire Laser Cannon</div>
+
+  <div id="overlay" class="overlay">
+    <h2 id="overlayTitle">SPACE INVADERS</h2>
+    <p id="overlaySub">Defend Earth against advancing alien invaders before they reach base!</p>
+    <button id="startBtn" class="btn">DEPLOY CANNON</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const waveEl = document.getElementById('wave');
+    const livesEl = document.getElementById('lives');
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlayTitle');
+    const overlaySub = document.getElementById('overlaySub');
+    const startBtn = document.getElementById('startBtn');
+
+    let playerX = canvas.width / 2;
+    const playerY = canvas.height - 35;
+    const playerWidth = 26;
+    const playerHeight = 16;
+    let bullets = [];
+    let enemyBullets = [];
+    let enemies = [];
+    let ufo = null;
+    let enemyDir = 1;
+    let enemyStepDown = false;
+    let enemyMoveTimer = 0;
+    let enemyMoveInterval = 40;
+
+    let score = 0;
+    let wave = 1;
+    let lives = 3;
+    let isRunning = false;
+    const keys = {};
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(freq, type = 'sine', duration = 0.08) {
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function spawnEnemies() {
+      enemies = [];
+      const rows = 4;
+      const cols = 8;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          enemies.push({
+            x: 60 + c * 44,
+            y: 40 + r * 30,
+            width: 22,
+            height: 16,
+            alive: true,
+            type: r === 0 ? 30 : r < 3 ? 20 : 10,
+            color: r === 0 ? '#f43f5e' : r < 3 ? '#38bdf8' : '#10b981'
+          });
+        }
+      }
+      enemyMoveInterval = Math.max(15, 45 - wave * 4);
+    }
+
+    function initGame() {
+      score = 0;
+      wave = 1;
+      lives = 3;
+      scoreEl.textContent = '0';
+      waveEl.textContent = '1';
+      livesEl.textContent = '❤❤❤';
+      bullets = [];
+      enemyBullets = [];
+      playerX = canvas.width / 2;
+      spawnEnemies();
+      isRunning = true;
+      overlay.style.display = 'none';
+    }
+
+    function fireBullet() {
+      if (bullets.length < 3) {
+        bullets.push({ x: playerX, y: playerY - 6, speed: 7 });
+        playBeep(640, 'square', 0.05);
+      }
+    }
+
+    function update() {
+      if (!isRunning) return;
+
+      if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+        playerX = Math.max(playerWidth / 2 + 10, playerX - 5);
+      }
+      if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+        playerX = Math.min(canvas.width - playerWidth / 2 - 10, playerX + 5);
+      }
+
+      // Bullets
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        b.y -= b.speed;
+        if (b.y < 0) {
+          bullets.splice(i, 1);
+          continue;
+        }
+
+        // Check enemy hit
+        for (const e of enemies) {
+          if (e.alive && b.x >= e.x && b.x <= e.x + e.width && b.y >= e.y && b.y <= e.y + e.height) {
+            e.alive = false;
+            bullets.splice(i, 1);
+            score += e.type;
+            scoreEl.textContent = score;
+            playBeep(240, 'triangle', 0.08);
+            break;
+          }
+        }
+      }
+
+      // Enemy Bullets
+      for (let i = enemyBullets.length - 1; i >= 0; i--) {
+        const eb = enemyBullets[i];
+        eb.y += eb.speed;
+
+        // Player hit
+        if (
+          eb.x >= playerX - playerWidth / 2 &&
+          eb.x <= playerX + playerWidth / 2 &&
+          eb.y >= playerY - playerHeight / 2 &&
+          eb.y <= playerY + playerHeight / 2
+        ) {
+          enemyBullets.splice(i, 1);
+          lives--;
+          livesEl.textContent = '❤'.repeat(Math.max(0, lives));
+          playBeep(120, 'sawtooth', 0.3);
+          if (lives <= 0) {
+            gameOver();
+            return;
+          }
+          continue;
+        }
+
+        if (eb.y > canvas.height) {
+          enemyBullets.splice(i, 1);
+        }
+      }
+
+      // Move Enemies
+      enemyMoveTimer++;
+      if (enemyMoveTimer >= enemyMoveInterval) {
+        enemyMoveTimer = 0;
+        let changeDir = false;
+
+        const aliveEnemies = enemies.filter(e => e.alive);
+        if (aliveEnemies.length === 0) {
+          wave++;
+          waveEl.textContent = wave;
+          playBeep(520, 'square', 0.2);
+          spawnEnemies();
+          return;
+        }
+
+        aliveEnemies.forEach(e => {
+          if ((enemyDir === 1 && e.x + e.width >= canvas.width - 20) || (enemyDir === -1 && e.x <= 20)) {
+            changeDir = true;
+          }
+        });
+
+        if (changeDir) {
+          enemyDir *= -1;
+          aliveEnemies.forEach(e => {
+            e.y += 14;
+            if (e.y + e.height >= playerY - 10) {
+              gameOver();
+            }
+          });
+        } else {
+          aliveEnemies.forEach(e => { e.x += enemyDir * 10; });
+        }
+
+        // Random enemy fire
+        if (Math.random() < 0.45 && enemyBullets.length < 4) {
+          const shooter = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
+          enemyBullets.push({ x: shooter.x + shooter.width / 2, y: shooter.y + shooter.height, speed: 3.5 });
+        }
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#050811';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Starfield
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.fillRect(80, 40, 1.5, 1.5);
+      ctx.fillRect(220, 140, 1.5, 1.5);
+      ctx.fillRect(380, 70, 1.5, 1.5);
+      ctx.fillRect(150, 290, 1.5, 1.5);
+      ctx.fillRect(340, 310, 1.5, 1.5);
+
+      // Player Cannon
+      ctx.fillStyle = '#10b981';
+      ctx.fillRect(playerX - playerWidth / 2, playerY, playerWidth, playerHeight);
+      ctx.fillRect(playerX - 3, playerY - 7, 6, 7);
+
+      // Enemies
+      enemies.forEach(e => {
+        if (!e.alive) return;
+        ctx.fillStyle = e.color;
+        ctx.fillRect(e.x + 2, e.y + 2, e.width - 4, e.height - 4);
+        ctx.fillStyle = '#050811';
+        ctx.fillRect(e.x + 5, e.y + 5, 3, 3);
+        ctx.fillRect(e.x + e.width - 8, e.y + 5, 3, 3);
+      });
+
+      // Player Bullets
+      ctx.fillStyle = '#38bdf8';
+      bullets.forEach(b => {
+        ctx.fillRect(b.x - 1.5, b.y, 3, 9);
+      });
+
+      // Enemy Bullets
+      ctx.fillStyle = '#f43f5e';
+      enemyBullets.forEach(eb => {
+        ctx.fillRect(eb.x - 1.5, eb.y, 3, 8);
+      });
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function gameOver() {
+      isRunning = false;
+      playBeep(110, 'sawtooth', 0.4);
+      overlayTitle.textContent = 'BASE DESTROYED';
+      overlayTitle.style.color = '#ef4444';
+      overlaySub.textContent = `You defended through Wave ${wave} with ${score} points!`;
+      startBtn.textContent = 'DEPLOY AGAIN';
+      overlay.style.display = 'flex';
+    }
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.key] = true;
+      if (['ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+      if (e.key === ' ' || e.code === 'Space') fireBullet();
+    });
+    window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+
+    startBtn.addEventListener('click', initGame);
+
+    loop();
+  </script>
+</body>
+</html>

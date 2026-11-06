@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Guess</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: #090d16;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      padding: 12px;
+    }
+    .header {
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #10b981;
+      letter-spacing: 2px;
+    }
+    .board {
+      display: grid;
+      grid-template-rows: repeat(6, 1fr);
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .board-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+    .tile {
+      width: 48px;
+      height: 48px;
+      border: 2px solid #1f2937;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 800;
+      text-transform: uppercase;
+      border-radius: 6px;
+      background: #0d1322;
+      transition: transform 0.15s, background-color 0.25s, border-color 0.25s;
+    }
+    .tile.active { border-color: #38bdf8; transform: scale(1.04); }
+    .tile.correct { background: #059669; border-color: #059669; color: #fff; }
+    .tile.present { background: #d97706; border-color: #d97706; color: #fff; }
+    .tile.absent { background: #374151; border-color: #374151; color: #9ca3af; }
+
+    .keyboard {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      width: 100%;
+      max-width: 420px;
+    }
+    .kb-row {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+    }
+    .key-btn {
+      background: #1e293b;
+      color: #f8fafc;
+      border: none;
+      border-radius: 4px;
+      height: 42px;
+      min-width: 32px;
+      padding: 0 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-transform: uppercase;
+      transition: background 0.12s;
+    }
+    .key-btn.wide { min-width: 50px; font-size: 11px; }
+    .key-btn:hover { background: #334155; }
+    .key-btn.correct { background: #059669; }
+    .key-btn.present { background: #d97706; }
+    .key-btn.absent { background: #1f2937; color: #64748b; }
+
+    .message {
+      height: 24px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #f59e0b;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>WORD GUESS</h1>
+  </div>
+  <div id="message" class="message">Guess the secret 5-letter word!</div>
+  <div id="board" class="board"></div>
+  <div id="keyboard" class="keyboard"></div>
+
+  <script>
+    const WORDS = [
+      'GAMES', 'VAULT', 'CYBER', 'PIXEL', 'QUEST', 'STAGE', 'POWER', 'SCORE',
+      'SPACE', 'LASER', 'SWORD', 'MAGIC', 'LEVEL', 'BRICK', 'SNAKE', 'ARENA',
+      'CHAMP', 'SPEED', 'TURBO', 'RETRO', 'FLASH', 'SHOCK', 'RADAR', 'BLAST'
+    ];
+
+    let secretWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+    let currentRow = 0;
+    let currentCol = 0;
+    let gameOver = false;
+    let guesses = Array.from({ length: 6 }, () => Array(5).fill(''));
+
+    const boardEl = document.getElementById('board');
+    const kbEl = document.getElementById('keyboard');
+    const msgEl = document.getElementById('message');
+
+    // Init Board
+    for (let r = 0; r < 6; r++) {
+      const row = document.createElement('div');
+      row.className = 'board-row';
+      for (let c = 0; c < 5; c++) {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        tile.id = `tile-${r}-${c}`;
+        row.appendChild(tile);
+      }
+      boardEl.appendChild(row);
+    }
+
+    // Init Keyboard
+    const KB_ROWS = [
+      ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+      ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+      ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'DEL']
+    ];
+
+    KB_ROWS.forEach(rowArr => {
+      const row = document.createElement('div');
+      row.className = 'kb-row';
+      rowArr.forEach(key => {
+        const btn = document.createElement('button');
+        btn.className = 'key-btn' + (key.length > 1 ? ' wide' : '');
+        btn.textContent = key;
+        btn.dataset.key = key;
+        btn.addEventListener('click', () => handleKey(key));
+        row.appendChild(btn);
+      });
+      kbEl.appendChild(row);
+    });
+
+    function showMessage(text, color = '#f59e0b') {
+      msgEl.textContent = text;
+      msgEl.style.color = color;
+    }
+
+    function handleKey(key) {
+      if (gameOver) return;
+
+      if (key === 'ENTER') {
+        submitGuess();
+      } else if (key === 'DEL' || key === 'BACKSPACE') {
+        deleteLetter();
+      } else if (/^[A-Z]$/.test(key)) {
+        addLetter(key);
+      }
+    }
+
+    function addLetter(letter) {
+      if (currentCol < 5) {
+        guesses[currentRow][currentCol] = letter;
+        const tile = document.getElementById(`tile-${currentRow}-${currentCol}`);
+        tile.textContent = letter;
+        tile.classList.add('active');
+        currentCol++;
+      }
+    }
+
+    function deleteLetter() {
+      if (currentCol > 0) {
+        currentCol--;
+        guesses[currentRow][currentCol] = '';
+        const tile = document.getElementById(`tile-${currentRow}-${currentCol}`);
+        tile.textContent = '';
+        tile.classList.remove('active');
+      }
+    }
+
+    function submitGuess() {
+      if (currentCol < 5) {
+        showMessage('Not enough letters!');
+        return;
+      }
+
+      const guess = guesses[currentRow].join('');
+      const secretArr = secretWord.split('');
+
+      // Check letters
+      const result = Array(5).fill('absent');
+      const letterCounts = {};
+
+      secretArr.forEach(l => { letterCounts[l] = (letterCounts[l] || 0) + 1; });
+
+      // First pass: correct
+      for (let i = 0; i < 5; i++) {
+        if (guess[i] === secretArr[i]) {
+          result[i] = 'correct';
+          letterCounts[guess[i]]--;
+        }
+      }
+
+      // Second pass: present
+      for (let i = 0; i < 5; i++) {
+        if (result[i] === 'absent' && letterCounts[guess[i]] > 0) {
+          result[i] = 'present';
+          letterCounts[guess[i]]--;
+        }
+      }
+
+      // Apply styles to tiles & keyboard
+      for (let i = 0; i < 5; i++) {
+        const tile = document.getElementById(`tile-${currentRow}-${i}`);
+        tile.classList.remove('active');
+        tile.classList.add(result[i]);
+
+        const keyBtn = kbEl.querySelector(`[data-key="${guess[i]}"]`);
+        if (keyBtn) {
+          if (result[i] === 'correct') {
+            keyBtn.className = 'key-btn correct';
+          } else if (result[i] === 'present' && !keyBtn.classList.contains('correct')) {
+            keyBtn.className = 'key-btn present';
+          } else if (result[i] === 'absent' && !keyBtn.classList.contains('correct') && !keyBtn.classList.contains('present')) {
+            keyBtn.className = 'key-btn absent';
+          }
+        }
+      }
+
+      if (guess === secretWord) {
+        gameOver = true;
+        showMessage(`Splendid! Solved in ${currentRow + 1} guesses!`, '#10b981');
+        return;
+      }
+
+      currentRow++;
+      currentCol = 0;
+
+      if (currentRow === 6) {
+        gameOver = true;
+        showMessage(`Game Over! The word was: ${secretWord}`, '#ef4444');
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      const key = e.key.toUpperCase();
+      if (key === 'ENTER' || key === 'BACKSPACE' || /^[A-Z]$/.test(key)) {
+        handleKey(key);
+      }
+    });
+  </script>
+</body>
+</html>

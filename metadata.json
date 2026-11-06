@@ -1,0 +1,6 @@
+{
+  "name": "PlayVault - Unblocked Games Hub",
+  "description": "A fast, clean unblocked games portal powered by an iframe-driven game registry with full-screen theater mode, category filters, and cloaking tools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
