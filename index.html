@@ -15,7 +15,21 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="./src/main.jsx"></script>
+    <script>
+      (function () {
+        function loadStaticEntry() {
+          if (window.__PLAYVAULT_MOUNTED__) return;
+          var root = document.getElementById('root');
+          if (root && root.childElementCount > 0) return;
+          var s = document.createElement('script');
+          s.src = './entry.js';
+          document.body.appendChild(s);
+        }
+        window.addEventListener('load', function () {
+          setTimeout(loadStaticEntry, 150);
+        });
+      })();
+    </script>
   </body>
 </html>
-

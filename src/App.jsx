@@ -33,7 +33,10 @@ export default function App() {
   useEffect(() => {
     async function loadGames() {
       try {
-        const res = await fetch('/games.json');
+        let res = await fetch('./games.json');
+        if (!res.ok) {
+          res = await fetch('./public/games.json');
+        }
         let initialGames = [];
         if (res.ok) {
           initialGames = await res.json();

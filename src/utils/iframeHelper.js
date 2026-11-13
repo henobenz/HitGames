@@ -4,19 +4,20 @@
 export function extractIframeSrc(iframeHtmlOrUrl) {
   if (!iframeHtmlOrUrl) return '';
   const trimmed = iframeHtmlOrUrl.trim();
-  
-  // If it's already a simple URL or path
-  if (!trimmed.startsWith('<iframe') && (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/'))) {
-    return trimmed;
+  let src = trimmed;
+
+  if (trimmed.startsWith('<iframe')) {
+    const match = trimmed.match(/src=["']([^"']+)["']/i);
+    if (match && match[1]) {
+      src = match[1];
+    }
   }
 
-  // Extract src from <iframe src="...">
-  const match = trimmed.match(/src=["']([^"']+)["']/i);
-  if (match && match[1]) {
-    return match[1];
+  if (src.startsWith('/games/')) {
+    src = `.${src}`;
   }
 
-  return trimmed;
+  return src;
 }
 
 /**
