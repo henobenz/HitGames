@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Word Guess</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    html, body {
+      height: 100%;
+      overscroll-behavior: none;
+    }
     body {
       background: #090d16;
       color: #f8fafc;
@@ -16,37 +20,54 @@
       justify-content: center;
       min-height: 100vh;
       overflow: hidden;
-      padding: 12px;
+      padding: 8px;
+      touch-action: manipulation;
     }
     .header {
-      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 8px;
       text-align: center;
     }
     .header h1 {
-      font-size: 26px;
+      font-size: clamp(20px, 5vw, 26px);
       font-weight: 800;
       color: #10b981;
       letter-spacing: 2px;
     }
+    .new-btn {
+      background: #111827;
+      color: #34d399;
+      border: 1px solid #1f2937;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .new-btn:active { background: #064e3b; }
     .board {
       display: grid;
       grid-template-rows: repeat(6, 1fr);
-      gap: 6px;
-      margin-bottom: 16px;
+      gap: 5px;
+      margin-bottom: 12px;
     }
     .board-row {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: 6px;
+      gap: 5px;
     }
     .tile {
-      width: 48px;
-      height: 48px;
+      width: clamp(38px, 11.5vw, 46px);
+      height: clamp(38px, 11.5vw, 46px);
       border: 2px solid #1f2937;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
+      font-size: clamp(18px, 5vw, 22px);
       font-weight: 800;
       text-transform: uppercase;
       border-radius: 6px;
@@ -71,31 +92,36 @@
       gap: 4px;
     }
     .key-btn {
+      flex: 1;
+      min-width: 0;
+      max-width: 38px;
       background: #1e293b;
       color: #f8fafc;
       border: none;
-      border-radius: 4px;
-      height: 42px;
-      min-width: 32px;
-      padding: 0 8px;
-      font-size: 13px;
+      border-radius: 5px;
+      height: clamp(38px, 6.5vh, 44px);
+      padding: 0 2px;
+      font-size: clamp(11px, 3vw, 13px);
       font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       text-transform: uppercase;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
       transition: background 0.12s;
     }
-    .key-btn.wide { min-width: 50px; font-size: 11px; }
+    .key-btn.wide { flex: 1.5; max-width: 60px; font-size: 11px; }
     .key-btn:hover { background: #334155; }
+    .key-btn:active { transform: scale(0.95); }
     .key-btn.correct { background: #059669; }
     .key-btn.present { background: #d97706; }
     .key-btn.absent { background: #1f2937; color: #64748b; }
 
     .message {
-      height: 24px;
-      font-size: 13px;
+      min-height: 20px;
+      font-size: 12px;
       font-weight: 600;
       color: #f59e0b;
       margin-bottom: 8px;
@@ -106,6 +132,7 @@
 <body>
   <div class="header">
     <h1>WORD GUESS</h1>
+    <button id="newGameBtn" class="new-btn" type="button">NEW WORD</button>
   </div>
   <div id="message" class="message">Guess the secret 5-letter word!</div>
   <div id="board" class="board"></div>
@@ -127,40 +154,57 @@
     const boardEl = document.getElementById('board');
     const kbEl = document.getElementById('keyboard');
     const msgEl = document.getElementById('message');
+    const newGameBtn = document.getElementById('newGameBtn');
 
-    // Init Board
-    for (let r = 0; r < 6; r++) {
-      const row = document.createElement('div');
-      row.className = 'board-row';
-      for (let c = 0; c < 5; c++) {
-        const tile = document.createElement('div');
-        tile.className = 'tile';
-        tile.id = `tile-${r}-${c}`;
-        row.appendChild(tile);
-      }
-      boardEl.appendChild(row);
-    }
-
-    // Init Keyboard
     const KB_ROWS = [
       ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
       ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
       ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'DEL']
     ];
 
-    KB_ROWS.forEach(rowArr => {
-      const row = document.createElement('div');
-      row.className = 'kb-row';
-      rowArr.forEach(key => {
-        const btn = document.createElement('button');
-        btn.className = 'key-btn' + (key.length > 1 ? ' wide' : '');
-        btn.textContent = key;
-        btn.dataset.key = key;
-        btn.addEventListener('click', () => handleKey(key));
-        row.appendChild(btn);
+    function buildUI() {
+      boardEl.innerHTML = '';
+      for (let r = 0; r < 6; r++) {
+        const row = document.createElement('div');
+        row.className = 'board-row';
+        for (let c = 0; c < 5; c++) {
+          const tile = document.createElement('div');
+          tile.className = 'tile';
+          tile.id = `tile-${r}-${c}`;
+          row.appendChild(tile);
+        }
+        boardEl.appendChild(row);
+      }
+
+      kbEl.innerHTML = '';
+      KB_ROWS.forEach(rowArr => {
+        const row = document.createElement('div');
+        row.className = 'kb-row';
+        rowArr.forEach(key => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'key-btn' + (key.length > 1 ? ' wide' : '');
+          btn.textContent = key;
+          btn.dataset.key = key;
+          btn.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            handleKey(key);
+          });
+          row.appendChild(btn);
+        });
+        kbEl.appendChild(row);
       });
-      kbEl.appendChild(row);
-    });
+    }
+
+    function resetGame() {
+      secretWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+      currentRow = 0;
+      currentCol = 0;
+      gameOver = false;
+      guesses = Array.from({ length: 6 }, () => Array(5).fill(''));
+      buildUI();
+      showMessage('Guess the secret 5-letter word!');
+    }
 
     function showMessage(text, color = '#f59e0b') {
       msgEl.textContent = text;
@@ -207,14 +251,11 @@
 
       const guess = guesses[currentRow].join('');
       const secretArr = secretWord.split('');
-
-      // Check letters
       const result = Array(5).fill('absent');
       const letterCounts = {};
 
       secretArr.forEach(l => { letterCounts[l] = (letterCounts[l] || 0) + 1; });
 
-      // First pass: correct
       for (let i = 0; i < 5; i++) {
         if (guess[i] === secretArr[i]) {
           result[i] = 'correct';
@@ -222,7 +263,6 @@
         }
       }
 
-      // Second pass: present
       for (let i = 0; i < 5; i++) {
         if (result[i] === 'absent' && letterCounts[guess[i]] > 0) {
           result[i] = 'present';
@@ -230,7 +270,6 @@
         }
       }
 
-      // Apply styles to tiles & keyboard
       for (let i = 0; i < 5; i++) {
         const tile = document.getElementById(`tile-${currentRow}-${i}`);
         tile.classList.remove('active');
@@ -269,6 +308,9 @@
         handleKey(key);
       }
     });
+
+    newGameBtn.addEventListener('click', resetGame);
+    buildUI();
   </script>
 </body>
 </html>

@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>2048 Puzzle</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    html, body {
+      height: 100%;
+      overscroll-behavior: none;
+    }
     body {
       background: #090d16;
       color: #f8fafc;
@@ -16,45 +20,50 @@
       justify-content: center;
       min-height: 100vh;
       overflow: hidden;
+      padding: 8px;
+      touch-action: manipulation;
     }
     .game-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      width: 360px;
-      margin-bottom: 12px;
+      width: min(360px, 92vw, 60vh);
+      margin-bottom: 10px;
+      gap: 8px;
     }
     .title-area h1 {
-      font-size: 32px;
+      font-size: clamp(24px, 7vw, 32px);
       font-weight: 800;
       color: #f59e0b;
       letter-spacing: -1px;
     }
     .scores-area {
       display: flex;
-      gap: 8px;
+      gap: 6px;
+      align-items: center;
     }
     .score-card {
       background: #111827;
       border: 1px solid #1f2937;
       border-radius: 6px;
-      padding: 6px 14px;
+      padding: 4px 10px;
       text-align: center;
     }
-    .score-card .label { font-size: 10px; color: #94a3b8; font-weight: 700; }
-    .score-card .num { font-size: 18px; color: #f8fafc; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .score-card .label { font-size: 9px; color: #94a3b8; font-weight: 700; }
+    .score-card .num { font-size: clamp(14px, 4vw, 18px); color: #f8fafc; font-weight: 700; font-variant-numeric: tabular-nums; }
     .grid-container {
       position: relative;
-      width: 360px;
-      height: 360px;
+      width: min(360px, 92vw, 60vh);
+      height: min(360px, 92vw, 60vh);
       background: #111827;
       border: 2px solid #1f2937;
       border-radius: 10px;
-      padding: 10px;
+      padding: clamp(6px, 2vw, 10px);
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       grid-template-rows: repeat(4, 1fr);
-      gap: 10px;
+      gap: clamp(6px, 2vw, 10px);
+      touch-action: none;
     }
     .grid-cell {
       background: #1f2937;
@@ -62,7 +71,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
+      font-size: clamp(18px, 5.5vw, 24px);
       font-weight: 800;
       transition: all 0.12s ease-in-out;
     }
@@ -72,16 +81,42 @@
     .cell-16 { background: #ea580c; color: #ffffff; }
     .cell-32 { background: #dc2626; color: #ffffff; }
     .cell-64 { background: #b91c1c; color: #ffffff; }
-    .cell-128 { background: #eab308; color: #000000; font-size: 22px; box-shadow: 0 0 10px rgba(234, 179, 8, 0.4); }
-    .cell-256 { background: #facc15; color: #000000; font-size: 22px; box-shadow: 0 0 12px rgba(250, 204, 21, 0.5); }
-    .cell-512 { background: #10b981; color: #ffffff; font-size: 22px; }
-    .cell-1028 { background: #06b6d4; color: #ffffff; font-size: 20px; }
-    .cell-2048 { background: #a855f7; color: #ffffff; font-size: 20px; box-shadow: 0 0 15px rgba(168, 85, 247, 0.7); }
-    
+    .cell-128 { background: #eab308; color: #000000; font-size: clamp(16px, 4.8vw, 22px); box-shadow: 0 0 10px rgba(234, 179, 8, 0.4); }
+    .cell-256 { background: #facc15; color: #000000; font-size: clamp(16px, 4.8vw, 22px); box-shadow: 0 0 12px rgba(250, 204, 21, 0.5); }
+    .cell-512 { background: #10b981; color: #ffffff; font-size: clamp(16px, 4.8vw, 22px); }
+    .cell-1024 { background: #06b6d4; color: #ffffff; font-size: clamp(14px, 4.2vw, 20px); }
+    .cell-2048 { background: #a855f7; color: #ffffff; font-size: clamp(14px, 4.2vw, 20px); box-shadow: 0 0 15px rgba(168, 85, 247, 0.7); }
+
+    .touch-arrows {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+    }
+    .arr-btn {
+      width: 48px;
+      height: 40px;
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .arr-btn:active {
+      background: #f59e0b;
+      color: #451a03;
+    }
     .controls-hint {
-      margin-top: 14px;
-      font-size: 12px;
+      margin-top: 8px;
+      font-size: 11px;
       color: #64748b;
+      text-align: center;
     }
     .overlay {
       position: absolute;
@@ -93,6 +128,7 @@
       align-items: center;
       justify-content: center;
       backdrop-filter: blur(4px);
+      z-index: 10;
     }
     .overlay h2 { font-size: 28px; margin-bottom: 8px; color: #f59e0b; }
     .overlay p { font-size: 14px; color: #94a3b8; margin-bottom: 16px; }
@@ -100,11 +136,12 @@
       background: #f59e0b;
       color: #451a03;
       border: none;
-      padding: 10px 22px;
+      padding: 10px 20px;
       border-radius: 6px;
       font-weight: 700;
       cursor: pointer;
       font-size: 14px;
+      touch-action: manipulation;
     }
     .btn:hover { background: #fbbf24; }
   </style>
@@ -123,7 +160,7 @@
         <div class="label">BEST</div>
         <div id="bestScore" class="num">0</div>
       </div>
-      <button id="restartBtn" class="btn" style="padding: 6px 12px; font-size: 12px;">NEW</button>
+      <button id="restartBtn" class="btn" style="padding: 8px 12px; font-size: 12px;">NEW</button>
     </div>
   </div>
 
@@ -135,15 +172,20 @@
     </div>
   </div>
 
-  <div class="controls-hint">Use Arrow Keys or WASD to Slide Tiles</div>
+  <div class="touch-arrows">
+    <button class="arr-btn" data-dir="left" aria-label="Slide Left">◀</button>
+    <button class="arr-btn" data-dir="up" aria-label="Slide Up">▲</button>
+    <button class="arr-btn" data-dir="down" aria-label="Slide Down">▼</button>
+    <button class="arr-btn" data-dir="right" aria-label="Slide Right">▶</button>
+  </div>
+
+  <div class="controls-hint">Swipe Board, Tap Arrows, or Use Arrow Keys / WASD</div>
 
   <script>
     const gridEl = document.getElementById('grid');
     const scoreEl = document.getElementById('score');
     const bestScoreEl = document.getElementById('bestScore');
     const overlay = document.getElementById('overlay');
-    const overlayTitle = document.getElementById('overlayTitle');
-    const overlaySub = document.getElementById('overlaySub');
     const restartBtn = document.getElementById('restartBtn');
     const playAgainBtn = document.getElementById('playAgainBtn');
 
@@ -157,8 +199,10 @@
     let best = parseInt(localStorage.getItem('playvault_2048_best') || '0', 10);
     bestScoreEl.textContent = best;
 
-    // Web Audio Synthesizer
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function unlockAudio() {
+      try { if (audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {}
+    }
     function playBeep(freq, type = 'sine', duration = 0.08) {
       try {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -176,7 +220,6 @@
     }
 
     function initCells() {
-      // Remove old cells except overlay
       const cells = gridEl.querySelectorAll('.grid-cell');
       cells.forEach(c => c.remove());
 
@@ -312,6 +355,7 @@
     }
 
     function startNewGame() {
+      unlockAudio();
       board = [
         [0, 0, 0, 0],
         [0, 0, 0, 0],
@@ -334,6 +378,47 @@
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') handleMove('right');
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') handleMove('up');
       if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') handleMove('down');
+    });
+
+    // Touch arrow buttons
+    document.querySelectorAll('.arr-btn').forEach(btn => {
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        unlockAudio();
+        handleMove(btn.dataset.dir);
+      });
+    });
+
+    // Swipe gesture on grid
+    let touchStartX = null;
+    let touchStartY = null;
+    gridEl.addEventListener('touchstart', (e) => {
+      if (e.target.closest('button')) return;
+      e.preventDefault();
+      unlockAudio();
+      if (e.touches.length > 0) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: false });
+
+    gridEl.addEventListener('touchmove', (e) => {
+      if (e.target.closest('button')) return;
+      e.preventDefault();
+    }, { passive: false });
+
+    gridEl.addEventListener('touchend', (e) => {
+      if (touchStartX === null || touchStartY === null || e.changedTouches.length === 0) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      touchStartX = null;
+      touchStartY = null;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 22) return;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        handleMove(dx > 0 ? 'right' : 'left');
+      } else {
+        handleMove(dy > 0 ? 'down' : 'up');
+      }
     });
 
     restartBtn.addEventListener('click', startNewGame);

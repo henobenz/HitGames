@@ -167,7 +167,7 @@ export const TheaterPlayer = ({
 
         {/* Embedded Game Iframe Container */}
         <div className={`relative w-full bg-slate-950 flex items-center justify-center ${
-          isFullscreen ? 'flex-1 h-[calc(100vh-45px)]' : 'h-[540px] sm:h-[620px]'
+          isFullscreen ? 'flex-1 h-[calc(100vh-45px)]' : 'h-[min(78vh,560px)] sm:h-[620px]'
         }`}>
           <iframe
             key={iframeKey}
@@ -227,7 +227,7 @@ export const TheaterPlayer = ({
           <div className="bg-slate-950/80 border border-slate-800/80 rounded-lg p-3.5">
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1.5">
               <Gamepad2 className="w-4 h-4" />
-              <span>Keyboard & Mouse Controls</span>
+              <span>Controls (Keyboard, Mouse &amp; Touch)</span>
             </div>
             <p className="text-xs text-slate-300 font-mono leading-relaxed">
               {game.controls}

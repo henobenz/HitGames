@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Brick Breaker</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    html, body {
+      height: 100%;
+      overscroll-behavior: none;
+    }
     body {
       background: #090d16;
       color: #f8fafc;
@@ -16,32 +20,40 @@
       justify-content: center;
       min-height: 100vh;
       overflow: hidden;
+      padding: 8px;
+      touch-action: manipulation;
     }
     .hud {
       display: flex;
       justify-content: space-between;
-      width: 480px;
-      max-width: 95vw;
-      padding: 12px 18px;
+      width: min(480px, 95vw);
+      padding: 10px 16px;
       background: #111827;
       border: 1px solid #1f2937;
       border-radius: 8px 8px 0 0;
-      font-size: 14px;
+      font-size: clamp(12px, 3vw, 14px);
       font-weight: 700;
     }
     .hud span { color: #f59e0b; }
     #canvas {
+      display: block;
+      width: min(480px, 95vw);
+      max-height: 70vh;
+      height: auto;
+      aspect-ratio: 480 / 420;
       background: #0d1322;
       border: 1px solid #1f2937;
       border-top: none;
       box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
       border-radius: 0 0 8px 8px;
       cursor: none;
+      touch-action: none;
     }
     .controls-hint {
       margin-top: 10px;
       font-size: 12px;
       color: #64748b;
+      text-align: center;
     }
     .overlay {
       position: absolute;
@@ -52,18 +64,21 @@
       align-items: center;
       justify-content: center;
       backdrop-filter: blur(4px);
+      padding: 16px;
+      z-index: 10;
     }
-    .overlay h2 { font-size: 28px; margin-bottom: 8px; color: #f59e0b; }
+    .overlay h2 { font-size: 28px; margin-bottom: 8px; color: #f59e0b; text-align: center; }
     .overlay p { font-size: 14px; color: #94a3b8; margin-bottom: 20px; text-align: center; max-width: 320px; }
     .btn {
       background: #f59e0b;
       color: #451a03;
       border: none;
-      padding: 10px 24px;
+      padding: 12px 26px;
       border-radius: 6px;
       font-weight: 700;
       cursor: pointer;
       font-size: 14px;
+      touch-action: manipulation;
       transition: transform 0.1s, background 0.15s;
     }
     .btn:hover { background: #fbbf24; transform: scale(1.03); }
@@ -76,7 +91,7 @@
     <div>BRICKS: <span id="bricksLeft">0</span></div>
   </div>
   <canvas id="canvas" width="480" height="420"></canvas>
-  <div class="controls-hint">Move Mouse or Arrow Keys / A-D to slide paddle · Space to launch</div>
+  <div class="controls-hint">Drag Screen / Mouse or A-D / Arrows · Tap or Space to Launch</div>
 
   <div id="overlay" class="overlay">
     <h2 id="overlayTitle">BRICK BREAKER</h2>
@@ -124,6 +139,9 @@
     const keys = {};
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function unlockAudio() {
+      try { if (audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {}
+    }
     function playBeep(freq, type = 'sine', duration = 0.08) {
       try {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -163,6 +181,7 @@
     }
 
     function initGame() {
+      unlockAudio();
       score = 0;
       lives = 3;
       scoreEl.textContent = '0';
@@ -183,7 +202,7 @@
     }
 
     function launchBall() {
-      if (ballAttached) {
+      if (isRunning && ballAttached) {
         ballAttached = false;
         playBeep(480, 'sine', 0.1);
       }
@@ -192,7 +211,6 @@
     function update() {
       if (!isRunning) return;
 
-      // Keyboard movement
       if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
         paddleX = Math.max(0, paddleX - 7);
       }
@@ -209,7 +227,6 @@
       ballX += ballSpeedX;
       ballY += ballSpeedY;
 
-      // Walls
       if (ballX - BALL_RADIUS <= 0) {
         ballX = BALL_RADIUS;
         ballSpeedX = -ballSpeedX;
@@ -226,7 +243,6 @@
         playBeep(260, 'triangle', 0.04);
       }
 
-      // Paddle hit
       if (
         ballY + BALL_RADIUS >= canvas.height - PADDLE_HEIGHT - 10 &&
         ballY - BALL_RADIUS <= canvas.height - 10 &&
@@ -239,7 +255,6 @@
         playBeep(420, 'square', 0.05);
       }
 
-      // Bricks collision
       for (let c = 0; c < COL_COUNT; c++) {
         for (let r = 0; r < ROW_COUNT; r++) {
           const b = bricks[c][r];
@@ -271,7 +286,6 @@
         }
       }
 
-      // Bottom lost
       if (ballY - BALL_RADIUS > canvas.height) {
         lives--;
         playBeep(160, 'sawtooth', 0.2);
@@ -288,7 +302,6 @@
       ctx.fillStyle = '#0d1322';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Bricks
       for (let c = 0; c < COL_COUNT; c++) {
         for (let r = 0; r < ROW_COUNT; r++) {
           if (bricks[c] && bricks[c][r] && bricks[c][r].status === 1) {
@@ -303,17 +316,22 @@
         }
       }
 
-      // Paddle
       ctx.fillStyle = '#f59e0b';
       ctx.fillRect(paddleX, canvas.height - PADDLE_HEIGHT - 10, PADDLE_WIDTH, PADDLE_HEIGHT);
       ctx.fillStyle = '#fde68a';
       ctx.fillRect(paddleX, canvas.height - PADDLE_HEIGHT - 10, PADDLE_WIDTH, 2);
 
-      // Ball
       ctx.fillStyle = '#f8fafc';
       ctx.beginPath();
       ctx.arc(ballX, ballY, BALL_RADIUS, 0, Math.PI * 2);
       ctx.fill();
+
+      if (isRunning && ballAttached) {
+        ctx.fillStyle = 'rgba(248, 250, 252, 0.75)';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('TAP OR PRESS SPACE TO LAUNCH', canvas.width / 2, canvas.height / 2 + 40);
+      }
     }
 
     function loop() {
@@ -342,13 +360,46 @@
       overlay.style.display = 'flex';
     }
 
-    canvas.addEventListener('mousemove', (e) => {
+    function setPaddleFromClientX(clientX) {
       const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      paddleX = Math.max(0, Math.min(canvas.width - PADDLE_WIDTH, mouseX - PADDLE_WIDTH / 2));
+      const scaleX = canvas.width / rect.width;
+      const x = (clientX - rect.left) * scaleX;
+      paddleX = Math.max(0, Math.min(canvas.width - PADDLE_WIDTH, x - PADDLE_WIDTH / 2));
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+      setPaddleFromClientX(e.clientX);
     });
 
-    window.addEventListener('click', launchBall);
+    let touchMoved = false;
+    let touchStartX = 0;
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      unlockAudio();
+      if (!isRunning || e.touches.length === 0) return;
+      touchStartX = e.touches[0].clientX;
+      touchMoved = false;
+      setPaddleFromClientX(e.touches[0].clientX);
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (!isRunning || e.touches.length === 0) return;
+      if (Math.abs(e.touches[0].clientX - touchStartX) > 10) {
+        touchMoved = true;
+      }
+      setPaddleFromClientX(e.touches[0].clientX);
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      if (!touchMoved) {
+        launchBall();
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('click', launchBall);
+
     window.addEventListener('keydown', (e) => {
       keys[e.key] = true;
       if (['ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
@@ -356,7 +407,10 @@
     });
     window.addEventListener('keyup', (e) => { keys[e.key] = false; });
 
-    startBtn.addEventListener('click', initGame);
+    startBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      initGame();
+    });
 
     initBricks();
     loop();

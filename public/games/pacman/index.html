@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Retro Maze Dot Muncher</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    html, body {
+      height: 100%;
+      overscroll-behavior: none;
+    }
     body {
       background: #090d16;
       color: #f8fafc;
@@ -16,31 +20,65 @@
       justify-content: center;
       min-height: 100vh;
       overflow: hidden;
+      padding: 8px;
+      touch-action: manipulation;
     }
     .hud {
       display: flex;
       justify-content: space-between;
-      width: 440px;
-      max-width: 95vw;
-      padding: 10px 16px;
+      width: min(440px, 92vw, 54vh);
+      padding: 10px 14px;
       background: #111827;
       border: 1px solid #1f2937;
       border-radius: 8px 8px 0 0;
-      font-size: 14px;
+      font-size: clamp(12px, 3vw, 14px);
       font-weight: 700;
     }
     .hud span { color: #facc15; }
     #canvas {
+      display: block;
+      width: min(440px, 92vw, 54vh);
+      height: auto;
+      aspect-ratio: 1 / 1;
       background: #050811;
       border: 1px solid #1f2937;
       border-top: none;
       box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
       border-radius: 0 0 8px 8px;
+      touch-action: none;
+    }
+    .dpad {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, 46px);
+      grid-template-rows: repeat(2, 40px);
+      gap: 5px;
+    }
+    .pad-btn {
+      background: #111827;
+      color: #facc15;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s, transform 0.08s;
+    }
+    .pad-btn:active {
+      background: #facc15;
+      color: #422006;
+      transform: scale(0.94);
     }
     .controls-hint {
-      margin-top: 10px;
-      font-size: 12px;
+      margin-top: 8px;
+      font-size: 11px;
       color: #64748b;
+      text-align: center;
     }
     .overlay {
       position: absolute;
@@ -51,18 +89,21 @@
       align-items: center;
       justify-content: center;
       backdrop-filter: blur(4px);
+      padding: 16px;
+      z-index: 10;
     }
-    .overlay h2 { font-size: 28px; margin-bottom: 8px; color: #facc15; }
+    .overlay h2 { font-size: 28px; margin-bottom: 8px; color: #facc15; text-align: center; }
     .overlay p { font-size: 14px; color: #94a3b8; margin-bottom: 20px; text-align: center; max-width: 300px; }
     .btn {
       background: #facc15;
       color: #422006;
       border: none;
-      padding: 10px 24px;
+      padding: 12px 26px;
       border-radius: 6px;
       font-weight: 700;
       cursor: pointer;
       font-size: 14px;
+      touch-action: manipulation;
       transition: transform 0.1s, background 0.15s;
     }
     .btn:hover { background: #fde047; transform: scale(1.03); }
@@ -75,7 +116,17 @@
     <div>DOTS: <span id="dotsLeft">0</span></div>
   </div>
   <canvas id="canvas" width="440" height="440"></canvas>
-  <div class="controls-hint">Arrow Keys or WASD to Navigate Maze</div>
+
+  <div class="dpad">
+    <div></div>
+    <button class="pad-btn" data-dir="up" aria-label="Move Up">▲</button>
+    <div></div>
+    <button class="pad-btn" data-dir="left" aria-label="Move Left">◀</button>
+    <button class="pad-btn" data-dir="down" aria-label="Move Down">▼</button>
+    <button class="pad-btn" data-dir="right" aria-label="Move Right">▶</button>
+  </div>
+
+  <div class="controls-hint">Swipe Maze, Tap D-Pad, or Arrow Keys / WASD</div>
 
   <div id="overlay" class="overlay">
     <h2 id="overlayTitle">MAZE MUNCHER</h2>
@@ -98,7 +149,6 @@
     const MAP_COLS = 11;
     const TILE = 40;
 
-    // 1 = Wall, 0 = Dot, 2 = Power Pellet, 3 = Empty
     const ORIGINAL_MAP = [
       [1,1,1,1,1,1,1,1,1,1,1],
       [1,2,0,0,0,1,0,0,0,2,1],
@@ -124,6 +174,9 @@
     let mouthDir = 0.05;
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function unlockAudio() {
+      try { if (audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {}
+    }
     function playBeep(freq, type = 'sine', duration = 0.08) {
       try {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -141,6 +194,7 @@
     }
 
     function initGame() {
+      unlockAudio();
       map = ORIGINAL_MAP.map(row => [...row]);
       score = 0;
       lives = 3;
@@ -178,17 +232,22 @@
       return map[gy][gx] !== 1;
     }
 
+    function setDirection(dir) {
+      if (dir === 'left') { pacman.nextDirX = -1; pacman.nextDirY = 0; }
+      else if (dir === 'right') { pacman.nextDirX = 1; pacman.nextDirY = 0; }
+      else if (dir === 'up') { pacman.nextDirX = 0; pacman.nextDirY = -1; }
+      else if (dir === 'down') { pacman.nextDirX = 0; pacman.nextDirY = 1; }
+    }
+
     let moveTick = 0;
     function update() {
       if (!isRunning) return;
 
       moveTick++;
       if (moveTick % 12 === 0) {
-        // Mouth animation
         mouthAngle += mouthDir;
         if (mouthAngle > 0.45 || mouthAngle < 0.05) mouthDir *= -1;
 
-        // Pacman turn
         if (canMoveTo(pacman.x + pacman.nextDirX, pacman.y + pacman.nextDirY)) {
           pacman.dirX = pacman.nextDirX;
           pacman.dirY = pacman.nextDirY;
@@ -198,12 +257,10 @@
           if (pacman.dirY === -1) pacman.angle = -Math.PI / 2;
         }
 
-        // Pacman move
         if (canMoveTo(pacman.x + pacman.dirX, pacman.y + pacman.dirY)) {
           pacman.x += pacman.dirX;
           pacman.y += pacman.dirY;
 
-          // Eat dot
           const tile = map[pacman.y][pacman.x];
           if (tile === 0) {
             map[pacman.y][pacman.x] = 3;
@@ -215,10 +272,9 @@
               return;
             }
           } else if (tile === 2) {
-            // Power pellet
             map[pacman.y][pacman.x] = 3;
             score += 50;
-            frightenedTimer = 60; // fright duration
+            frightenedTimer = 60;
             scoreEl.textContent = score;
             playBeep(680, 'square', 0.12);
             if (updateDotsCount() === 0) {
@@ -228,17 +284,14 @@
           }
         }
 
-        // Frightened countdown
         if (frightenedTimer > 0) frightenedTimer--;
 
-        // Ghosts move
         ghosts.forEach(g => {
           const dirs = [
             { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }
           ].filter(d => canMoveTo(g.x + d.x, g.y + d.y) && !(d.x === -g.dirX && d.y === -g.dirY));
 
           if (dirs.length > 0) {
-            // Choose dir toward or away from pacman
             const choice = dirs[Math.floor(Math.random() * dirs.length)];
             g.dirX = choice.x;
             g.dirY = choice.y;
@@ -246,16 +299,13 @@
           g.x += g.dirX;
           g.y += g.dirY;
 
-          // Collision with Pacman
           if (g.x === pacman.x && g.y === pacman.y) {
             if (frightenedTimer > 0) {
-              // Ghost eaten
               score += 200;
               scoreEl.textContent = score;
               g.x = 5; g.y = 5;
               playBeep(720, 'sine', 0.15);
             } else {
-              // Pacman caught
               lives--;
               livesEl.textContent = '🟡'.repeat(Math.max(0, lives));
               playBeep(140, 'sawtooth', 0.25);
@@ -274,7 +324,6 @@
       ctx.fillStyle = '#050811';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Draw Maze
       for (let r = 0; r < MAP_ROWS; r++) {
         for (let c = 0; c < MAP_COLS; c++) {
           const cell = map[r][c];
@@ -301,7 +350,6 @@
         }
       }
 
-      // Draw Pacman
       const pacPx = pacman.x * TILE + TILE / 2;
       const pacPy = pacman.y * TILE + TILE / 2;
       ctx.fillStyle = '#facc15';
@@ -317,7 +365,6 @@
       ctx.closePath();
       ctx.fill();
 
-      // Draw Ghosts
       ghosts.forEach(g => {
         const gx = g.x * TILE + TILE / 2;
         const gy = g.y * TILE + TILE / 2;
@@ -329,7 +376,6 @@
         ctx.closePath();
         ctx.fill();
 
-        // Eyes
         ctx.fillStyle = '#fff';
         ctx.beginPath();
         ctx.arc(gx - 4, gy - 4, 3, 0, Math.PI * 2);
@@ -372,10 +418,49 @@
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         e.preventDefault();
       }
-      if (e.key === 'ArrowLeft' || e.key === 'a') { pacman.nextDirX = -1; pacman.nextDirY = 0; }
-      if (e.key === 'ArrowRight' || e.key === 'd') { pacman.nextDirX = 1; pacman.nextDirY = 0; }
-      if (e.key === 'ArrowUp' || e.key === 'w') { pacman.nextDirX = 0; pacman.nextDirY = -1; }
-      if (e.key === 'ArrowDown' || e.key === 's') { pacman.nextDirX = 0; pacman.nextDirY = 1; }
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') setDirection('left');
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') setDirection('right');
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') setDirection('up');
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') setDirection('down');
+    });
+
+    document.querySelectorAll('.pad-btn[data-dir]').forEach(btn => {
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        unlockAudio();
+        setDirection(btn.dataset.dir);
+      });
+    });
+
+    let touchStartX = null;
+    let touchStartY = null;
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      unlockAudio();
+      if (e.touches.length > 0) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (touchStartX === null || touchStartY === null || e.touches.length === 0) return;
+      const cx = e.touches[0].clientX;
+      const cy = e.touches[0].clientY;
+      const dx = cx - touchStartX;
+      const dy = cy - touchStartY;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) >= 20) {
+        if (Math.abs(dx) > Math.abs(dy)) setDirection(dx > 0 ? 'right' : 'left');
+        else setDirection(dy > 0 ? 'down' : 'up');
+        touchStartX = cx;
+        touchStartY = cy;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => {
+      touchStartX = null;
+      touchStartY = null;
     });
 
     startBtn.addEventListener('click', initGame);

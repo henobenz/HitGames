@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Minesweeper Classic</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    html, body {
+      height: 100%;
+      overscroll-behavior: none;
+    }
     body {
       background: #090d16;
       color: #f8fafc;
@@ -16,13 +20,16 @@
       justify-content: center;
       min-height: 100vh;
       overflow: hidden;
+      padding: 8px;
+      touch-action: manipulation;
     }
     .game-window {
       background: #111827;
       border: 2px solid #1f2937;
       border-radius: 8px;
-      padding: 16px;
+      padding: clamp(10px, 3vw, 16px);
       box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+      max-width: 96vw;
     }
     .hud {
       display: flex;
@@ -31,36 +38,67 @@
       background: #0d1322;
       border: 1px solid #1f2937;
       border-radius: 6px;
-      padding: 10px 16px;
-      margin-bottom: 12px;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      gap: 8px;
     }
     .lcd {
       background: #030712;
       color: #ef4444;
       font-family: 'Courier New', Courier, monospace;
-      font-size: 22px;
+      font-size: clamp(18px, 5vw, 22px);
       font-weight: 800;
       letter-spacing: 2px;
       padding: 2px 8px;
       border-radius: 4px;
       border: 1px solid #1e293b;
-      min-width: 58px;
+      min-width: 54px;
       text-align: center;
     }
     .face-btn {
-      font-size: 24px;
+      font-size: 22px;
       background: #1f2937;
       border: 1px solid #374151;
       border-radius: 6px;
       cursor: pointer;
-      width: 38px;
-      height: 38px;
+      width: 40px;
+      height: 40px;
       display: flex;
       align-items: center;
       justify-content: center;
+      touch-action: manipulation;
       transition: transform 0.1s;
     }
     .face-btn:active { transform: scale(0.92); }
+    .mode-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .mode-btn {
+      flex: 1;
+      height: 36px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #0d1322;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .mode-btn.active-reveal {
+      background: #064e3b;
+      border-color: #10b981;
+      color: #6ee7b7;
+    }
+    .mode-btn.active-flag {
+      background: #7f1d1d;
+      border-color: #ef4444;
+      color: #fecaca;
+    }
     .grid {
       display: grid;
       gap: 2px;
@@ -70,8 +108,8 @@
       border: 1px solid #1f2937;
     }
     .cell {
-      width: 32px;
-      height: 32px;
+      width: clamp(28px, 9.2vw, 34px);
+      height: clamp(28px, 9.2vw, 34px);
       background: #1f2937;
       border: 1px solid #374151;
       border-radius: 4px;
@@ -79,8 +117,10 @@
       align-items: center;
       justify-content: center;
       font-weight: 800;
-      font-size: 15px;
+      font-size: clamp(13px, 4vw, 16px);
       cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
       transition: background 0.1s;
     }
     .cell:hover:not(.revealed) { background: #374151; }
@@ -97,8 +137,8 @@
     .n-5 { color: #b91c1c; }
     .n-6 { color: #06b6d4; }
     .controls-hint {
-      margin-top: 12px;
-      font-size: 12px;
+      margin-top: 10px;
+      font-size: 11px;
       color: #64748b;
       text-align: center;
     }
@@ -108,11 +148,15 @@
   <div class="game-window">
     <div class="hud">
       <div id="mineLcd" class="lcd">010</div>
-      <button id="faceBtn" class="face-btn">🙂</button>
+      <button id="faceBtn" class="face-btn" type="button" aria-label="Restart">🙂</button>
       <div id="timeLcd" class="lcd">000</div>
     </div>
+    <div class="mode-bar">
+      <button id="revealModeBtn" class="mode-btn active-reveal" type="button">⛏ REVEAL MODE</button>
+      <button id="flagModeBtn" class="mode-btn" type="button">🚩 FLAG MODE</button>
+    </div>
     <div id="grid" class="grid"></div>
-    <div class="controls-hint">Left Click: Reveal · Right Click / Long Press: Flag 🚩</div>
+    <div class="controls-hint">Tap Mode Above · Long Press or Right Click: Flag 🚩</div>
   </div>
 
   <script>
@@ -127,13 +171,25 @@
     let gameOver = false;
     let timer = 0;
     let timerInterval = null;
+    let flagMode = false;
 
     const gridEl = document.getElementById('grid');
     const mineLcd = document.getElementById('mineLcd');
     const timeLcd = document.getElementById('timeLcd');
     const faceBtn = document.getElementById('faceBtn');
+    const revealModeBtn = document.getElementById('revealModeBtn');
+    const flagModeBtn = document.getElementById('flagModeBtn');
 
-    gridEl.style.gridTemplateColumns = `repeat(${COLS}, 32px)`;
+    gridEl.style.gridTemplateColumns = `repeat(${COLS}, clamp(28px, 9.2vw, 34px))`;
+
+    function setMode(isFlag) {
+      flagMode = isFlag;
+      revealModeBtn.className = 'mode-btn' + (!flagMode ? ' active-reveal' : '');
+      flagModeBtn.className = 'mode-btn' + (flagMode ? ' active-flag' : '');
+    }
+
+    revealModeBtn.addEventListener('click', () => setMode(false));
+    flagModeBtn.addEventListener('click', () => setMode(true));
 
     function init() {
       gameOver = false;
@@ -149,18 +205,49 @@
       board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
       gridEl.innerHTML = '';
 
-      // Create cells
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
           const cell = document.createElement('div');
           cell.className = 'cell';
           cell.dataset.r = r;
           cell.dataset.c = c;
-          cell.addEventListener('click', () => reveal(r, c));
+
+          let pressTimer = null;
+          let longPressed = false;
+
+          cell.addEventListener('touchstart', () => {
+            longPressed = false;
+            pressTimer = setTimeout(() => {
+              longPressed = true;
+              toggleFlag(r, c);
+            }, 420);
+          }, { passive: true });
+
+          cell.addEventListener('touchend', () => {
+            clearTimeout(pressTimer);
+          });
+          cell.addEventListener('touchmove', () => {
+            clearTimeout(pressTimer);
+          }, { passive: true });
+
+          cell.addEventListener('click', (e) => {
+            if (longPressed) {
+              longPressed = false;
+              e.preventDefault();
+              return;
+            }
+            if (flagMode) {
+              toggleFlag(r, c);
+            } else {
+              reveal(r, c);
+            }
+          });
+
           cell.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             toggleFlag(r, c);
           });
+
           gridEl.appendChild(cell);
         }
       }
@@ -174,7 +261,6 @@
         minePositions.add(`${r},${c}`);
       }
 
-      // Count neighbors
       for (const pos of minePositions) {
         const [mr, mc] = pos.split(',').map(Number);
         for (let dr = -1; dr <= 1; dr++) {
@@ -235,7 +321,6 @@
         cell.textContent = val;
         cell.classList.add(`n-${val}`);
       } else {
-        // Flood fill empty neighbors
         for (let dr = -1; dr <= 1; dr++) {
           for (let dc = -1; dc <= 1; dc++) {
             const nr = r + dr;
@@ -252,7 +337,7 @@
       }
     }
 
-    function triggerGameOver(hitR, hitC) {
+    function triggerGameOver() {
       gameOver = true;
       clearInterval(timerInterval);
       faceBtn.textContent = '😵';

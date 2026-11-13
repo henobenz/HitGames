@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Space Invaders Defender</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    html, body {
+      height: 100%;
+      overscroll-behavior: none;
+    }
     body {
       background: #090d16;
       color: #f8fafc;
@@ -16,31 +20,82 @@
       justify-content: center;
       min-height: 100vh;
       overflow: hidden;
+      padding: 8px;
+      touch-action: manipulation;
     }
     .hud {
       display: flex;
       justify-content: space-between;
-      width: 480px;
-      max-width: 95vw;
-      padding: 12px 18px;
+      width: min(480px, 95vw, 66vh);
+      padding: 10px 16px;
       background: #111827;
       border: 1px solid #1f2937;
       border-radius: 8px 8px 0 0;
-      font-size: 14px;
+      font-size: clamp(12px, 3vw, 14px);
       font-weight: 700;
     }
     .hud span { color: #38bdf8; }
     #canvas {
+      display: block;
+      width: min(480px, 95vw, 66vh);
+      height: auto;
+      aspect-ratio: 480 / 420;
       background: #050811;
       border: 1px solid #1f2937;
       border-top: none;
       box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
       border-radius: 0 0 8px 8px;
+      touch-action: none;
+    }
+    .touch-controls {
+      margin-top: 10px;
+      width: min(480px, 95vw, 66vh);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .move-group {
+      display: flex;
+      gap: 8px;
+    }
+    .t-btn {
+      width: 62px;
+      height: 46px;
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .t-btn.fire {
+      width: 112px;
+      background: #881337;
+      border-color: #f43f5e;
+      color: #ffe4e6;
+      font-size: 14px;
+      letter-spacing: 0.8px;
+    }
+    .t-btn:active, .t-btn.active {
+      background: #38bdf8;
+      color: #082f49;
+    }
+    .t-btn.fire:active, .t-btn.fire.active {
+      background: #f43f5e;
+      color: #fff;
     }
     .controls-hint {
-      margin-top: 10px;
-      font-size: 12px;
+      margin-top: 8px;
+      font-size: 11px;
       color: #64748b;
+      text-align: center;
     }
     .overlay {
       position: absolute;
@@ -51,18 +106,21 @@
       align-items: center;
       justify-content: center;
       backdrop-filter: blur(4px);
+      padding: 16px;
+      z-index: 10;
     }
-    .overlay h2 { font-size: 28px; margin-bottom: 8px; color: #38bdf8; }
+    .overlay h2 { font-size: 28px; margin-bottom: 8px; color: #38bdf8; text-align: center; }
     .overlay p { font-size: 14px; color: #94a3b8; margin-bottom: 20px; text-align: center; max-width: 300px; }
     .btn {
       background: #38bdf8;
       color: #082f49;
       border: none;
-      padding: 10px 24px;
+      padding: 12px 26px;
       border-radius: 6px;
       font-weight: 700;
       cursor: pointer;
       font-size: 14px;
+      touch-action: manipulation;
       transition: transform 0.1s, background 0.15s;
     }
     .btn:hover { background: #7dd3fc; transform: scale(1.03); }
@@ -75,7 +133,16 @@
     <div>LIVES: <span id="lives">❤❤❤</span></div>
   </div>
   <canvas id="canvas" width="480" height="420"></canvas>
-  <div class="controls-hint">Arrow Keys / A-D to Move · Space to Fire Laser Cannon</div>
+
+  <div class="touch-controls">
+    <div class="move-group">
+      <button id="leftBtn" class="t-btn" type="button" aria-label="Move Left">◀</button>
+      <button id="rightBtn" class="t-btn" type="button" aria-label="Move Right">▶</button>
+    </div>
+    <button id="fireBtn" class="t-btn fire" type="button">FIRE LASER</button>
+  </div>
+
+  <div class="controls-hint">Drag Screen, Tap Buttons, or Arrow Keys / A-D · Space / Fire to Shoot</div>
 
   <div id="overlay" class="overlay">
     <h2 id="overlayTitle">SPACE INVADERS</h2>
@@ -93,6 +160,9 @@
     const overlayTitle = document.getElementById('overlayTitle');
     const overlaySub = document.getElementById('overlaySub');
     const startBtn = document.getElementById('startBtn');
+    const leftBtn = document.getElementById('leftBtn');
+    const rightBtn = document.getElementById('rightBtn');
+    const fireBtn = document.getElementById('fireBtn');
 
     let playerX = canvas.width / 2;
     const playerY = canvas.height - 35;
@@ -101,9 +171,7 @@
     let bullets = [];
     let enemyBullets = [];
     let enemies = [];
-    let ufo = null;
     let enemyDir = 1;
-    let enemyStepDown = false;
     let enemyMoveTimer = 0;
     let enemyMoveInterval = 40;
 
@@ -114,6 +182,9 @@
     const keys = {};
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function unlockAudio() {
+      try { if (audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {}
+    }
     function playBeep(freq, type = 'sine', duration = 0.08) {
       try {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -151,6 +222,7 @@
     }
 
     function initGame() {
+      unlockAudio();
       score = 0;
       wave = 1;
       lives = 3;
@@ -166,6 +238,7 @@
     }
 
     function fireBullet() {
+      if (!isRunning) return;
       if (bullets.length < 3) {
         bullets.push({ x: playerX, y: playerY - 6, speed: 7 });
         playBeep(640, 'square', 0.05);
@@ -182,7 +255,6 @@
         playerX = Math.min(canvas.width - playerWidth / 2 - 10, playerX + 5);
       }
 
-      // Bullets
       for (let i = bullets.length - 1; i >= 0; i--) {
         const b = bullets[i];
         b.y -= b.speed;
@@ -191,7 +263,6 @@
           continue;
         }
 
-        // Check enemy hit
         for (const e of enemies) {
           if (e.alive && b.x >= e.x && b.x <= e.x + e.width && b.y >= e.y && b.y <= e.y + e.height) {
             e.alive = false;
@@ -204,12 +275,10 @@
         }
       }
 
-      // Enemy Bullets
       for (let i = enemyBullets.length - 1; i >= 0; i--) {
         const eb = enemyBullets[i];
         eb.y += eb.speed;
 
-        // Player hit
         if (
           eb.x >= playerX - playerWidth / 2 &&
           eb.x <= playerX + playerWidth / 2 &&
@@ -232,7 +301,6 @@
         }
       }
 
-      // Move Enemies
       enemyMoveTimer++;
       if (enemyMoveTimer >= enemyMoveInterval) {
         enemyMoveTimer = 0;
@@ -265,7 +333,6 @@
           aliveEnemies.forEach(e => { e.x += enemyDir * 10; });
         }
 
-        // Random enemy fire
         if (Math.random() < 0.45 && enemyBullets.length < 4) {
           const shooter = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
           enemyBullets.push({ x: shooter.x + shooter.width / 2, y: shooter.y + shooter.height, speed: 3.5 });
@@ -277,7 +344,6 @@
       ctx.fillStyle = '#050811';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Starfield
       ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
       ctx.fillRect(80, 40, 1.5, 1.5);
       ctx.fillRect(220, 140, 1.5, 1.5);
@@ -285,12 +351,10 @@
       ctx.fillRect(150, 290, 1.5, 1.5);
       ctx.fillRect(340, 310, 1.5, 1.5);
 
-      // Player Cannon
       ctx.fillStyle = '#10b981';
       ctx.fillRect(playerX - playerWidth / 2, playerY, playerWidth, playerHeight);
       ctx.fillRect(playerX - 3, playerY - 7, 6, 7);
 
-      // Enemies
       enemies.forEach(e => {
         if (!e.alive) return;
         ctx.fillStyle = e.color;
@@ -300,13 +364,11 @@
         ctx.fillRect(e.x + e.width - 8, e.y + 5, 3, 3);
       });
 
-      // Player Bullets
       ctx.fillStyle = '#38bdf8';
       bullets.forEach(b => {
         ctx.fillRect(b.x - 1.5, b.y, 3, 9);
       });
 
-      // Enemy Bullets
       ctx.fillStyle = '#f43f5e';
       enemyBullets.forEach(eb => {
         ctx.fillRect(eb.x - 1.5, eb.y, 3, 8);
@@ -335,6 +397,72 @@
       if (e.key === ' ' || e.code === 'Space') fireBullet();
     });
     window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+
+    function bindHoldKey(btn, keyName) {
+      const press = (e) => {
+        e.preventDefault();
+        unlockAudio();
+        keys[keyName] = true;
+        btn.classList.add('active');
+      };
+      const release = () => {
+        keys[keyName] = false;
+        btn.classList.remove('active');
+      };
+      btn.addEventListener('pointerdown', press);
+      btn.addEventListener('pointerup', release);
+      btn.addEventListener('pointercancel', release);
+      btn.addEventListener('pointerleave', release);
+    }
+
+    bindHoldKey(leftBtn, 'ArrowLeft');
+    bindHoldKey(rightBtn, 'ArrowRight');
+
+    let fireInterval = null;
+    const stopFire = () => {
+      clearInterval(fireInterval);
+      fireInterval = null;
+      fireBtn.classList.remove('active');
+    };
+    fireBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      unlockAudio();
+      fireBtn.classList.add('active');
+      fireBullet();
+      stopFire();
+      fireBtn.classList.add('active');
+      fireInterval = setInterval(fireBullet, 180);
+    });
+    fireBtn.addEventListener('pointerup', stopFire);
+    fireBtn.addEventListener('pointercancel', stopFire);
+    fireBtn.addEventListener('pointerleave', stopFire);
+
+    // Optional canvas touch drag to move + tap to shoot
+    let canvasDragMoved = false;
+    let canvasTouchStartX = 0;
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      unlockAudio();
+      if (!isRunning || e.touches.length === 0) return;
+      canvasTouchStartX = e.touches[0].clientX;
+      canvasDragMoved = false;
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (!isRunning || e.touches.length === 0) return;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const tx = (e.touches[0].clientX - rect.left) * scaleX;
+      if (Math.abs(e.touches[0].clientX - canvasTouchStartX) > 6) {
+        canvasDragMoved = true;
+      }
+      playerX = Math.max(playerWidth / 2 + 10, Math.min(canvas.width - playerWidth / 2 - 10, tx));
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+      if (!canvasDragMoved) fireBullet();
+    });
 
     startBtn.addEventListener('click', initGame);
 

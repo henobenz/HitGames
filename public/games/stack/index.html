@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Tower Stack</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    html, body {
+      height: 100%;
+      overscroll-behavior: none;
+    }
     body {
       background: #090d16;
       color: #f8fafc;
@@ -16,13 +20,14 @@
       justify-content: center;
       min-height: 100vh;
       overflow: hidden;
+      padding: 8px;
+      touch-action: none;
     }
     .hud {
       display: flex;
       justify-content: space-between;
-      width: 360px;
-      max-width: 95vw;
-      padding: 12px 18px;
+      width: min(360px, 94vw, 56vh);
+      padding: 10px 16px;
       background: #111827;
       border: 1px solid #1f2937;
       border-radius: 8px 8px 0 0;
@@ -31,17 +36,24 @@
     }
     .hud span { color: #f59e0b; }
     #canvas {
+      display: block;
+      width: min(360px, 94vw, 56vh);
+      max-height: 75vh;
+      height: auto;
+      aspect-ratio: 360 / 460;
       background: #0b1120;
       border: 1px solid #1f2937;
       border-top: none;
       box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
       border-radius: 0 0 8px 8px;
       cursor: pointer;
+      touch-action: none;
     }
     .controls-hint {
       margin-top: 10px;
       font-size: 12px;
       color: #64748b;
+      text-align: center;
     }
     .overlay {
       position: absolute;
@@ -52,18 +64,21 @@
       align-items: center;
       justify-content: center;
       backdrop-filter: blur(4px);
+      padding: 16px;
+      z-index: 10;
     }
-    .overlay h2 { font-size: 28px; margin-bottom: 8px; color: #f59e0b; }
+    .overlay h2 { font-size: 28px; margin-bottom: 8px; color: #f59e0b; text-align: center; }
     .overlay p { font-size: 14px; color: #94a3b8; margin-bottom: 20px; text-align: center; max-width: 280px; }
     .btn {
       background: #f59e0b;
       color: #451a03;
       border: none;
-      padding: 10px 24px;
+      padding: 12px 26px;
       border-radius: 6px;
       font-weight: 700;
       cursor: pointer;
       font-size: 14px;
+      touch-action: manipulation;
       transition: transform 0.1s, background 0.15s;
     }
     .btn:hover { background: #fbbf24; transform: scale(1.03); }
@@ -75,7 +90,7 @@
     <div>BEST: <span id="highScore">0</span></div>
   </div>
   <canvas id="canvas" width="360" height="460"></canvas>
-  <div class="controls-hint">Tap / Click or Space to Drop Slab</div>
+  <div class="controls-hint">Tap Anywhere, Click, or Press Space to Drop Slab</div>
 
   <div id="overlay" class="overlay">
     <h2 id="overlayTitle">TOWER STACK</h2>
@@ -105,6 +120,9 @@
     let isRunning = false;
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function unlockAudio() {
+      try { if (audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {}
+    }
     function playBeep(freq, type = 'sine', duration = 0.08) {
       try {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -127,6 +145,7 @@
     }
 
     function initGame() {
+      unlockAudio();
       score = 0;
       combo = 0;
       scoreEl.textContent = '0';
@@ -158,17 +177,14 @@
       const diff = currentSlab.x - prev.x;
 
       if (Math.abs(diff) < 3) {
-        // Perfect match
         currentSlab.x = prev.x;
         combo++;
         playBeep(440 + combo * 60, 'sine', 0.12);
       } else {
         combo = 0;
         if (diff > 0) {
-          // Overhang right
           currentSlab.width -= diff;
         } else {
-          // Overhang left
           currentSlab.width += diff;
           currentSlab.x = prev.x;
         }
@@ -190,7 +206,6 @@
         localStorage.setItem('playvault_stack_high', highScore.toString());
       }
 
-      // Camera shift down if stack exceeds half screen
       if (currentSlab.y < canvas.height / 2) {
         const offset = SLAB_HEIGHT;
         stack.forEach(s => s.y += offset);
@@ -214,7 +229,6 @@
       ctx.fillStyle = '#0b1120';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Stack
       stack.forEach((s) => {
         ctx.fillStyle = s.color;
         ctx.fillRect(s.x, s.y, s.width, SLAB_HEIGHT - 1);
@@ -222,7 +236,6 @@
         ctx.fillRect(s.x, s.y, s.width, 2);
       });
 
-      // Moving slab
       if (currentSlab) {
         ctx.fillStyle = currentSlab.color;
         ctx.fillRect(currentSlab.x, currentSlab.y, currentSlab.width, SLAB_HEIGHT - 1);
@@ -247,7 +260,15 @@
       overlay.style.display = 'flex';
     }
 
-    canvas.addEventListener('click', dropSlab);
+    document.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('button')) return;
+      if (isRunning) {
+        e.preventDefault();
+        unlockAudio();
+        dropSlab();
+      }
+    });
+
     window.addEventListener('keydown', (e) => {
       if (e.key === ' ' || e.code === 'Space') {
         e.preventDefault();

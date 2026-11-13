@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Block Drop Classic</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    html, body {
+      height: 100%;
+      overscroll-behavior: none;
+    }
     body {
       background: #090d16;
       color: #f8fafc;
@@ -16,24 +20,55 @@
       justify-content: center;
       min-height: 100vh;
       overflow: hidden;
+      padding: 6px;
+      touch-action: manipulation;
     }
+    .mobile-topbar {
+      display: none;
+      width: min(360px, 95vw);
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .mini-stat {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 6px;
+      padding: 4px 8px;
+      text-align: center;
+      flex: 1;
+    }
+    .mini-stat .label { font-size: 9px; color: #94a3b8; }
+    .mini-stat .val { font-size: 13px; font-weight: 700; color: #38bdf8; font-variant-numeric: tabular-nums; }
+    .mini-preview {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 6px;
+      padding: 2px 6px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .mini-preview span { font-size: 8px; color: #94a3b8; }
     .game-container {
       display: flex;
-      gap: 16px;
+      gap: 14px;
       align-items: flex-start;
-      padding: 16px;
+      justify-content: center;
     }
     .side-panel {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      width: 120px;
+      gap: 10px;
+      width: 112px;
     }
     .panel-box {
       background: #111827;
       border: 1px solid #1f2937;
       border-radius: 8px;
-      padding: 10px;
+      padding: 8px;
       text-align: center;
     }
     .panel-title {
@@ -43,16 +78,65 @@
       margin-bottom: 4px;
     }
     .panel-value {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 700;
       color: #38bdf8;
       font-variant-numeric: tabular-nums;
     }
     #tetrisCanvas {
+      display: block;
+      width: auto;
+      height: min(440px, 60vh);
+      aspect-ratio: 1 / 2;
       background: #0d1322;
       border: 2px solid #1f2937;
       border-radius: 8px;
       box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+      touch-action: none;
+    }
+    .touch-controls {
+      margin-top: 8px;
+      width: min(360px, 95vw);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .touch-group {
+      display: flex;
+      gap: 6px;
+    }
+    .t-btn {
+      min-width: 44px;
+      height: 44px;
+      padding: 0 10px;
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      color: #f8fafc;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s, transform 0.08s;
+    }
+    .t-btn.accent {
+      background: #581c87;
+      border-color: #a855f7;
+      color: #f3e8ff;
+      font-size: 11px;
+    }
+    .t-btn.sm-text {
+      font-size: 11px;
+    }
+    .t-btn:active {
+      background: #a855f7;
+      color: #fff;
+      transform: scale(0.94);
     }
     .overlay {
       position: absolute;
@@ -63,6 +147,8 @@
       align-items: center;
       justify-content: center;
       backdrop-filter: blur(4px);
+      padding: 16px;
+      z-index: 10;
     }
     .overlay h2 {
       font-size: 26px;
@@ -80,23 +166,38 @@
       background: #a855f7;
       color: #ffffff;
       border: none;
-      padding: 10px 24px;
+      padding: 12px 26px;
       border-radius: 6px;
       font-weight: 700;
       cursor: pointer;
       font-size: 14px;
+      touch-action: manipulation;
       transition: transform 0.1s, background 0.15s;
     }
     .btn:hover { background: #c084fc; transform: scale(1.03); }
-    .controls-hint {
-      margin-top: 8px;
-      font-size: 12px;
-      color: #64748b;
-      text-align: center;
+
+    @media (max-width: 600px) {
+      .side-panel { display: none; }
+      .mobile-topbar { display: flex; }
+      #tetrisCanvas { height: min(400px, 60vh); }
     }
   </style>
 </head>
 <body>
+  <div class="mobile-topbar">
+    <div class="mini-preview">
+      <span>HOLD</span>
+      <canvas id="mobileHoldCanvas" width="44" height="44"></canvas>
+    </div>
+    <div class="mini-stat"><div class="label">SCORE</div><div id="mScore" class="val">0</div></div>
+    <div class="mini-stat"><div class="label">LVL</div><div id="mLevel" class="val">1</div></div>
+    <div class="mini-stat"><div class="label">LINES</div><div id="mLines" class="val">0</div></div>
+    <div class="mini-preview">
+      <span>NEXT</span>
+      <canvas id="mobileNextCanvas" width="44" height="44"></canvas>
+    </div>
+  </div>
+
   <div class="game-container">
     <div class="side-panel">
       <div class="panel-box">
@@ -130,12 +231,25 @@
       </div>
       <div class="panel-box" style="font-size: 11px; color: #94a3b8; line-height: 1.4;">
         <span style="color:#e2e8f0; font-weight:600;">Controls:</span><br>
-        ← → Move<br>
-        ↑ Rotate<br>
+        ← → / Swipe Move<br>
+        ↑ / Tap Rotate<br>
         ↓ Soft Drop<br>
         Space Hard Drop<br>
         C to Hold
       </div>
+    </div>
+  </div>
+
+  <div class="touch-controls">
+    <div class="touch-group">
+      <button id="btnLeft" class="t-btn" aria-label="Move Left">◀</button>
+      <button id="btnDown" class="t-btn" aria-label="Soft Drop">▼</button>
+      <button id="btnRight" class="t-btn" aria-label="Move Right">▶</button>
+    </div>
+    <div class="touch-group">
+      <button id="btnHold" class="t-btn sm-text">HOLD</button>
+      <button id="btnRotate" class="t-btn" aria-label="Rotate">↻</button>
+      <button id="btnDrop" class="t-btn accent">DROP</button>
     </div>
   </div>
 
@@ -152,10 +266,15 @@
     const holdCtx = holdCanvas.getContext('2d');
     const nextCanvas = document.getElementById('nextCanvas');
     const nextCtx = nextCanvas.getContext('2d');
+    const mHoldCtx = document.getElementById('mobileHoldCanvas').getContext('2d');
+    const mNextCtx = document.getElementById('mobileNextCanvas').getContext('2d');
 
     const scoreEl = document.getElementById('score');
     const levelEl = document.getElementById('level');
     const linesEl = document.getElementById('lines');
+    const mScoreEl = document.getElementById('mScore');
+    const mLevelEl = document.getElementById('mLevel');
+    const mLinesEl = document.getElementById('mLines');
     const highScoreEl = document.getElementById('highScore');
     const overlay = document.getElementById('overlay');
     const overlayTitle = document.getElementById('overlayTitle');
@@ -193,8 +312,10 @@
     let isRunning = false;
     let isPaused = false;
 
-    // Web Audio Synthesizer
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function unlockAudio() {
+      try { if (audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {}
+    }
     function playBeep(freq, type = 'sine', duration = 0.08) {
       try {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -209,6 +330,15 @@
         osc.start();
         osc.stop(audioCtx.currentTime + duration);
       } catch (e) {}
+    }
+
+    function syncStats() {
+      scoreEl.textContent = score;
+      levelEl.textContent = level;
+      linesEl.textContent = lines;
+      mScoreEl.textContent = score;
+      mLevelEl.textContent = level;
+      mLinesEl.textContent = lines;
     }
 
     function createBoard() {
@@ -229,10 +359,9 @@
 
     function rotate(matrix) {
       const N = matrix.length;
-      const result = matrix.map((row, i) =>
+      return matrix.map((row, i) =>
         row.map((val, j) => matrix[N - 1 - j][i])
       );
-      return result;
     }
 
     function collide(board, piece, offsetX = 0, offsetY = 0, testMatrix = null) {
@@ -271,7 +400,7 @@
           board.splice(r, 1);
           board.unshift(Array(COLS).fill(0));
           cleared++;
-          r++; // check same row index again
+          r++;
         }
       }
       if (cleared > 0) {
@@ -281,9 +410,7 @@
         level = Math.floor(lines / 10) + 1;
         dropInterval = Math.max(120, 800 - (level - 1) * 70);
 
-        scoreEl.textContent = score;
-        linesEl.textContent = lines;
-        levelEl.textContent = level;
+        syncStats();
 
         if (score > highScore) {
           highScore = score;
@@ -295,7 +422,15 @@
       }
     }
 
+    function drawPreviews() {
+      drawMini(nextCtx, nextPiece, 80, 16);
+      drawMini(mNextCtx, nextPiece, 44, 9);
+      drawMini(holdCtx, holdPiece, 80, 16);
+      drawMini(mHoldCtx, holdPiece, 44, 9);
+    }
+
     function drop() {
+      if (!isRunning || isPaused) return;
       if (!collide(board, currentPiece, 0, 1)) {
         currentPiece.y++;
       } else {
@@ -306,7 +441,7 @@
         currentPiece = nextPiece;
         nextPiece = getRandomPiece();
         canHold = true;
-        drawMini(nextCtx, nextPiece);
+        drawPreviews();
 
         if (collide(board, currentPiece)) {
           gameOver();
@@ -316,17 +451,53 @@
       dropCounter = 0;
     }
 
+    function movePiece(dir) {
+      if (!isRunning || isPaused) return;
+      if (!collide(board, currentPiece, dir, 0)) {
+        currentPiece.x += dir;
+        draw();
+      }
+    }
+
+    function softDrop() {
+      if (!isRunning || isPaused) return;
+      drop();
+      score += 1;
+      syncStats();
+      draw();
+    }
+
+    function rotatePiece() {
+      if (!isRunning || isPaused) return;
+      const rotated = rotate(currentPiece.matrix);
+      if (!collide(board, currentPiece, 0, 0, rotated)) {
+        currentPiece.matrix = rotated;
+        playBeep(320, 'sine', 0.04);
+      } else if (!collide(board, currentPiece, 1, 0, rotated)) {
+        currentPiece.matrix = rotated;
+        currentPiece.x += 1;
+        playBeep(320, 'sine', 0.04);
+      } else if (!collide(board, currentPiece, -1, 0, rotated)) {
+        currentPiece.matrix = rotated;
+        currentPiece.x -= 1;
+        playBeep(320, 'sine', 0.04);
+      }
+      draw();
+    }
+
     function hardDrop() {
+      if (!isRunning || isPaused) return;
       while (!collide(board, currentPiece, 0, 1)) {
         currentPiece.y++;
         score += 2;
       }
-      scoreEl.textContent = score;
+      syncStats();
       drop();
+      draw();
     }
 
     function hold() {
-      if (!canHold) return;
+      if (!isRunning || isPaused || !canHold) return;
       if (!holdPiece) {
         holdPiece = {
           matrix: SHAPES.find(s => s.name === currentPiece.name).matrix.map(r => [...r]),
@@ -335,7 +506,6 @@
         };
         currentPiece = nextPiece;
         nextPiece = getRandomPiece();
-        drawMini(nextCtx, nextPiece);
       } else {
         const temp = {
           matrix: SHAPES.find(s => s.name === currentPiece.name).matrix.map(r => [...r]),
@@ -352,24 +522,24 @@
         holdPiece = temp;
       }
       canHold = false;
-      drawMini(holdCtx, holdPiece);
+      drawPreviews();
+      draw();
     }
 
-    function drawMini(context, piece) {
+    function drawMini(context, piece, boxSize, blockSize) {
       context.fillStyle = '#111827';
-      context.fillRect(0, 0, 80, 80);
+      context.fillRect(0, 0, boxSize, boxSize);
       if (!piece) return;
 
       const m = piece.matrix;
-      const size = 16;
-      const ox = (80 - m[0].length * size) / 2;
-      const oy = (80 - m.length * size) / 2;
+      const ox = (boxSize - m[0].length * blockSize) / 2;
+      const oy = (boxSize - m.length * blockSize) / 2;
 
       m.forEach((row, r) => {
         row.forEach((val, c) => {
           if (val !== 0) {
             context.fillStyle = piece.color;
-            context.fillRect(ox + c * size, oy + r * size, size - 1, size - 1);
+            context.fillRect(ox + c * blockSize, oy + r * blockSize, blockSize - 1, blockSize - 1);
           }
         });
       });
@@ -379,7 +549,6 @@
       ctx.fillStyle = '#0d1322';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Subtle grid
       ctx.strokeStyle = '#151f33';
       ctx.lineWidth = 1;
       for (let x = 0; x <= canvas.width; x += BLOCK_SIZE) {
@@ -389,7 +558,6 @@
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
       }
 
-      // Draw settled board
       board.forEach((row, r) => {
         row.forEach((color, c) => {
           if (color !== 0) {
@@ -399,7 +567,6 @@
       });
 
       if (currentPiece) {
-        // Ghost piece
         let ghostY = currentPiece.y;
         while (!collide(board, currentPiece, 0, ghostY - currentPiece.y + 1)) {
           ghostY++;
@@ -414,7 +581,6 @@
           });
         });
 
-        // Active piece
         currentPiece.matrix.forEach((row, r) => {
           row.forEach((val, c) => {
             if (val !== 0) {
@@ -448,21 +614,19 @@
     }
 
     function startGame() {
+      unlockAudio();
       board = createBoard();
       score = 0;
       level = 1;
       lines = 0;
       dropInterval = 800;
-      scoreEl.textContent = '0';
-      levelEl.textContent = '1';
-      linesEl.textContent = '0';
+      syncStats();
 
       currentPiece = getRandomPiece();
       nextPiece = getRandomPiece();
       holdPiece = null;
       canHold = true;
-      drawMini(nextCtx, nextPiece);
-      drawMini(holdCtx, null);
+      drawPreviews();
 
       isRunning = true;
       isPaused = false;
@@ -487,35 +651,100 @@
       }
       if (!isRunning) return;
 
-      if (e.key === 'ArrowLeft') {
-        if (!collide(board, currentPiece, -1, 0)) currentPiece.x--;
-      } else if (e.key === 'ArrowRight') {
-        if (!collide(board, currentPiece, 1, 0)) currentPiece.x++;
-      } else if (e.key === 'ArrowDown') {
-        drop();
-        score += 1;
-        scoreEl.textContent = score;
-      } else if (e.key === 'ArrowUp') {
-        const rotated = rotate(currentPiece.matrix);
-        if (!collide(board, currentPiece, 0, 0, rotated)) {
-          currentPiece.matrix = rotated;
-          playBeep(320, 'sine', 0.04);
-        } else if (!collide(board, currentPiece, 1, 0, rotated)) {
-          currentPiece.matrix = rotated;
-          currentPiece.x += 1;
-        } else if (!collide(board, currentPiece, -1, 0, rotated)) {
-          currentPiece.matrix = rotated;
-          currentPiece.x -= 1;
-        }
-      } else if (e.key === ' ' || e.code === 'Space') {
-        hardDrop();
-      } else if (e.key === 'c' || e.key === 'C') {
-        hold();
+      if (e.key === 'ArrowLeft') movePiece(-1);
+      else if (e.key === 'ArrowRight') movePiece(1);
+      else if (e.key === 'ArrowDown') softDrop();
+      else if (e.key === 'ArrowUp') rotatePiece();
+      else if (e.key === ' ' || e.code === 'Space') hardDrop();
+      else if (e.key === 'c' || e.key === 'C') hold();
+    });
+
+    // Touch controls with auto-repeat for holdable Left/Right/Down
+    function bindRepeatableButton(el, fn, repeatDelay = 150, repeatRate = 65) {
+      let delayTimer = null;
+      let repeatTimer = null;
+      const stop = () => {
+        clearTimeout(delayTimer);
+        clearInterval(repeatTimer);
+        delayTimer = null;
+        repeatTimer = null;
+      };
+      el.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        unlockAudio();
+        fn();
+        stop();
+        delayTimer = setTimeout(() => {
+          repeatTimer = setInterval(fn, repeatRate);
+        }, repeatDelay);
+      });
+      el.addEventListener('pointerup', stop);
+      el.addEventListener('pointercancel', stop);
+      el.addEventListener('pointerleave', stop);
+    }
+
+    bindRepeatableButton(document.getElementById('btnLeft'), () => movePiece(-1));
+    bindRepeatableButton(document.getElementById('btnRight'), () => movePiece(1));
+    bindRepeatableButton(document.getElementById('btnDown'), softDrop, 120, 55);
+
+    document.getElementById('btnRotate').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      unlockAudio();
+      rotatePiece();
+    });
+    document.getElementById('btnDrop').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      unlockAudio();
+      hardDrop();
+    });
+    document.getElementById('btnHold').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      unlockAudio();
+      hold();
+    });
+
+    // Canvas swipe & tap gestures
+    let tStartX = null;
+    let tStartY = null;
+    let tMoved = false;
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      unlockAudio();
+      if (e.touches.length > 0) {
+        tStartX = e.touches[0].clientX;
+        tStartY = e.touches[0].clientY;
+        tMoved = false;
       }
-      draw();
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (tStartX === null || tStartY === null || e.touches.length === 0) return;
+      const cx = e.touches[0].clientX;
+      const cy = e.touches[0].clientY;
+      const dx = cx - tStartX;
+      const dy = cy - tStartY;
+      if (Math.abs(dx) >= 24) {
+        movePiece(dx > 0 ? 1 : -1);
+        tStartX = cx;
+        tMoved = true;
+      } else if (dy >= 28) {
+        softDrop();
+        tStartY = cy;
+        tMoved = true;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+      if (!tMoved) {
+        rotatePiece();
+      }
+      tStartX = null;
+      tStartY = null;
     });
 
     startBtn.addEventListener('click', startGame);
+    draw();
   </script>
 </body>
 </html>

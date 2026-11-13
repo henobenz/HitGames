@@ -90,7 +90,7 @@
       '.pv-theater{display:flex;flex-direction:column;gap:20px}',
       '.pv-player-box{background:#020617;border:1px solid #1e293b;border-radius:12px;overflow:hidden;box-shadow:0 24px 48px rgba(0,0,0,0.5)}',
       '.pv-player-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#0f172a;border-bottom:1px solid #1e293b}',
-      '.pv-player-frame{width:100%;height:580px;background:#020617}',
+      '.pv-player-frame{width:100%;height:min(78vh,580px);background:#020617}',
       '.pv-player-frame iframe{width:100%;height:100%;border:none}',
       '.pv-details-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}',
       '@media(max-width:900px){.pv-details-grid{grid-template-columns:1fr}.pv-nav{display:none}}',
