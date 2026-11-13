@@ -42,7 +42,6 @@ export const AddGameModal = ({
       return;
     }
 
-    // Construct valid iframe HTML snippet
     const formattedIframe = iframeInput.trim().startsWith('<iframe')
       ? iframeInput.trim()
       : buildIframeSnippet(src, title.trim());
@@ -54,12 +53,12 @@ export const AddGameModal = ({
       title: title.trim(),
       category,
       description: description.trim() || 'Custom user added web game embed.',
-      controls: controls.trim() || 'Click or use standard keyboard controls',
+      controls: controls.trim() || 'Click, tap, or use standard keyboard controls',
       iframe: formattedIframe,
       rating: 5.0,
       playedCount: 1,
       tags: [category, 'Custom', 'Web'],
-      accentColor: '#10b981',
+      accentColor: '#22d3ee',
       isCustom: true
     };
 
@@ -68,27 +67,27 @@ export const AddGameModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#02030a]/85 backdrop-blur-sm">
       <div 
-        className="relative w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl p-6 flex flex-col max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-xl bg-[#080b1f] border border-purple-500/40 rounded-2xl shadow-[0_24px_60px_rgba(0,0,0,0.9),0_0_32px_rgba(168,85,247,0.2)] p-6 flex flex-col max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div className="flex items-center justify-between pb-4 border-b border-purple-500/20">
           <div>
-            <h2 className="text-lg font-bold text-white">Add Custom Game</h2>
+            <h2 className="font-display text-lg font-bold text-white">Add Custom Game</h2>
             <p className="text-xs text-slate-400">Embed any HTML5 game by storing its iframe snippet</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-purple-500/15 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {error && (
-          <div className="mt-4 p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg text-xs text-rose-300 flex items-center gap-2">
+          <div className="mt-4 p-3 bg-rose-500/10 border border-rose-500/40 rounded-xl text-xs text-rose-300 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -96,7 +95,7 @@ export const AddGameModal = ({
 
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-cyan-300 mb-1">
               Game Title *
             </label>
             <input
@@ -104,20 +103,20 @@ export const AddGameModal = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Super Drift, Hexagon, etc."
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+              className="w-full px-3 py-2 bg-[#04050f] border border-purple-500/35 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
               required
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-cyan-300 mb-1">
                 Category
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-400"
+                className="w-full px-3 py-2 bg-[#04050f] border border-purple-500/35 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-400"
               >
                 <option value="Arcade">Arcade</option>
                 <option value="Retro">Retro</option>
@@ -129,28 +128,28 @@ export const AddGameModal = ({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-cyan-300 mb-1">
                 Controls Hint
               </label>
               <input
                 type="text"
                 value={controls}
                 onChange={(e) => setControls(e.target.value)}
-                placeholder="e.g. Arrow keys to steer, Space to boost"
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                placeholder="e.g. Arrow keys or Swipe"
+                className="w-full px-3 py-2 bg-[#04050f] border border-purple-500/35 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
               />
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold text-slate-300">
+              <label className="block text-xs font-semibold text-cyan-300">
                 Iframe Code Snippet or Embed URL *
               </label>
               <button
                 type="button"
                 onClick={handleTestPreview}
-                className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium"
+                className="text-xs text-purple-300 hover:text-cyan-300 flex items-center gap-1 font-medium cursor-pointer"
               >
                 <Eye className="w-3.5 h-3.5" />
                 <span>Test Embed</span>
@@ -161,18 +160,18 @@ export const AddGameModal = ({
               value={iframeInput}
               onChange={(e) => setIframeInput(e.target.value)}
               placeholder='<iframe src="https://example.com/game.html" allowfullscreen></iframe>'
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+              className="w-full px-3 py-2 bg-[#04050f] border border-purple-500/35 rounded-xl text-xs font-mono-code text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
               required
             />
-            <p className="text-[11px] text-slate-500 mt-1">
+            <p className="text-[11px] text-slate-400 mt-1">
               Paste the exact &lt;iframe&gt; HTML code or URL. It will be stored in your JSON game database.
             </p>
           </div>
 
           {previewSrc && (
-            <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
-              <div className="text-[11px] font-semibold text-slate-400 mb-2">Live Preview Test:</div>
-              <div className="w-full h-44 rounded overflow-hidden border border-slate-800 bg-black">
+            <div className="p-3 bg-[#04050f] border border-cyan-500/30 rounded-xl">
+              <div className="text-[11px] font-semibold text-cyan-300 mb-2">Live Preview Test:</div>
+              <div className="w-full h-44 rounded-lg overflow-hidden border border-purple-500/30 bg-black">
                 <iframe
                   src={previewSrc}
                   title="Game Preview"
@@ -184,7 +183,7 @@ export const AddGameModal = ({
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-cyan-300 mb-1">
               Description
             </label>
             <textarea
@@ -192,21 +191,21 @@ export const AddGameModal = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Brief summary of gameplay..."
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+              className="w-full px-3 py-2 bg-[#04050f] border border-purple-500/35 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
             />
           </div>
 
-          <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+          <div className="pt-3 border-t border-purple-500/20 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition-colors"
+              className="neon-btn-outline px-4 py-2 text-xs font-medium rounded-xl cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-xs font-semibold text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-lg transition-colors flex items-center gap-1.5"
+              className="neon-btn-cyan px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Save Game to JSON</span>

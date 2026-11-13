@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Gamepad2, Plus, Code2, ShieldAlert, Check, EyeOff } from 'lucide-react';
 
 export const CLOAK_OPTIONS = [
-  { id: 'default', label: 'Default (PlayVault)', title: 'PlayVault — Unblocked Games Hub', faviconUrl: './favicon.ico' },
+  { id: 'default', label: 'Default (PlayVault)', title: 'PlayVault — Neon Arcade Hub', faviconUrl: './favicon.ico' },
   { id: 'classroom', label: 'Google Classroom', title: 'Classes — Google Classroom', faviconUrl: 'https://ssl.gstatic.com/classroom/favicon.png' },
   { id: 'drive', label: 'Google Drive', title: 'My Drive — Google Drive', faviconUrl: 'https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png' },
   { id: 'docs', label: 'Google Docs', title: 'Untitled Document — Google Docs', faviconUrl: 'https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico' },
@@ -22,69 +22,47 @@ export const Navbar = ({
   const [isCloakOpen, setIsCloakOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-8">
+    <header className="sticky top-0 z-40 w-full bg-[#050716]/90 backdrop-blur-md border-b border-purple-500/25 shadow-[0_4px_24px_rgba(34,211,238,0.08)]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
         
-        {/* Zone 1: Single Brand Wordmark */}
+        {/* Zone 1: Brand Wordmark */}
         <div 
           onClick={() => onSelectCategory('All')} 
           className="flex items-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0 group"
         >
-          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:border-emerald-400 group-hover:scale-105 transition-all">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600/30 to-cyan-500/20 border border-cyan-400/50 shadow-[0_0_14px_rgba(34,211,238,0.3)] flex items-center justify-center text-cyan-300 group-hover:border-cyan-300 group-hover:shadow-[0_0_20px_rgba(168,85,247,0.5)] group-hover:scale-105 transition-all">
             <Gamepad2 className="w-5 h-5" />
           </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
-              PlayVault
-            </span>
-          </div>
+          <span className="font-display text-xl font-bold tracking-tight bg-gradient-to-r from-cyan-300 via-sky-200 to-purple-400 bg-clip-text text-transparent group-hover:brightness-110 transition-all">
+            PlayVault
+          </span>
         </div>
 
-        {/* Zone 2: 4-5 single line category links */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-400">
-          <button
-            onClick={() => onSelectCategory('All')}
-            className={`whitespace-nowrap shrink-0 transition-colors hover:text-white ${
-              currentCategory === 'All' ? 'text-emerald-400 font-semibold' : ''
-            }`}
-          >
-            All Games
-          </button>
-          <button
-            onClick={() => onSelectCategory('Retro')}
-            className={`whitespace-nowrap shrink-0 transition-colors hover:text-white ${
-              currentCategory === 'Retro' ? 'text-emerald-400 font-semibold' : ''
-            }`}
-          >
-            Retro
-          </button>
-          <button
-            onClick={() => onSelectCategory('Puzzle')}
-            className={`whitespace-nowrap shrink-0 transition-colors hover:text-white ${
-              currentCategory === 'Puzzle' ? 'text-emerald-400 font-semibold' : ''
-            }`}
-          >
-            Puzzle
-          </button>
-          <button
-            onClick={() => onSelectCategory('Action')}
-            className={`whitespace-nowrap shrink-0 transition-colors hover:text-white ${
-              currentCategory === 'Action' ? 'text-emerald-400 font-semibold' : ''
-            }`}
-          >
-            Action
-          </button>
-          <button
-            onClick={() => onSelectCategory('Favorites')}
-            className={`whitespace-nowrap shrink-0 transition-colors hover:text-white ${
-              currentCategory === 'Favorites' ? 'text-emerald-400 font-semibold' : ''
-            }`}
-          >
-            Favorites
-          </button>
+        {/* Zone 2: Single-line category links */}
+        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
+          {['All', 'Retro', 'Puzzle', 'Action', 'Favorites'].map((cat) => {
+            const label = cat === 'All' ? 'All Games' : cat;
+            const active = currentCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => onSelectCategory(cat)}
+                className={`relative py-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                  active
+                    ? 'text-cyan-300 font-semibold drop-shadow-[0_0_8px_rgba(34,211,238,0.65)]'
+                    : 'hover:text-white'
+                }`}
+              >
+                <span>{label}</span>
+                {active && (
+                  <span className="absolute left-0 right-0 -bottom-1 h-0.5 rounded-full bg-gradient-to-r from-cyan-400 to-purple-500 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+                )}
+              </button>
+            );
+          })}
         </nav>
 
-        {/* Zone 3: Primary Action & Tools */}
+        {/* Zone 3: Actions */}
         <div className="flex items-center gap-2.5 shrink-0">
           
           {/* Stealth Tab Cloaker dropdown */}
@@ -92,9 +70,9 @@ export const Navbar = ({
             <button
               onClick={() => setIsCloakOpen(!isCloakOpen)}
               title="Stealth Tab Cloaker (Disguise browser tab)"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-900 border border-slate-700/80 rounded-lg hover:border-slate-600 hover:text-white transition-all whitespace-nowrap shrink-0"
+              className="neon-btn-outline flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap shrink-0 cursor-pointer"
             >
-              <EyeOff className="w-3.5 h-3.5 text-slate-400" />
+              <EyeOff className="w-3.5 h-3.5 text-purple-300" />
               <span className="hidden sm:inline">Cloak Tab</span>
             </button>
 
@@ -104,9 +82,9 @@ export const Navbar = ({
                   className="fixed inset-0 z-40" 
                   onClick={() => setIsCloakOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1.5 z-50">
-                  <div className="px-3 py-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
-                    Disguise Tab Title & Icon
+                <div className="absolute right-0 mt-2 w-56 bg-[#0a0e26] border border-purple-500/40 rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.8),0_0_20px_rgba(168,85,247,0.2)] py-1.5 z-50">
+                  <div className="px-3 py-1.5 text-[11px] font-semibold text-cyan-300 tracking-wide border-b border-purple-500/20">
+                    Disguise Tab Title &amp; Icon
                   </div>
                   {CLOAK_OPTIONS.map((opt) => (
                     <button
@@ -115,10 +93,10 @@ export const Navbar = ({
                         onSelectCloak(opt);
                         setIsCloakOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 flex items-center justify-between transition-colors"
+                      className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-purple-500/15 hover:text-white flex items-center justify-between transition-colors cursor-pointer"
                     >
                       <span className="truncate">{opt.label}</span>
-                      {currentCloak === opt.id && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                      {currentCloak === opt.id && <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
                     </button>
                   ))}
                 </div>
@@ -130,7 +108,7 @@ export const Navbar = ({
           <button
             onClick={onTriggerPanic}
             title="Emergency Panic Screen (Press Esc or click to disguise as Google Classroom)"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg hover:bg-rose-500/20 hover:border-rose-400 transition-colors whitespace-nowrap shrink-0"
+            className="neon-btn-danger flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap shrink-0 cursor-pointer"
           >
             <ShieldAlert className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Panic (Esc)</span>
@@ -140,16 +118,16 @@ export const Navbar = ({
           <button
             onClick={onOpenJsonModal}
             title="Inspect games.json (All iframe records)"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-900 border border-slate-700/80 rounded-lg hover:border-slate-600 hover:text-white transition-colors whitespace-nowrap shrink-0"
+            className="neon-btn-outline flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap shrink-0 cursor-pointer"
           >
-            <Code2 className="w-3.5 h-3.5 text-sky-400" />
+            <Code2 className="w-3.5 h-3.5 text-cyan-400" />
             <span className="hidden sm:inline">games.json</span>
           </button>
 
           {/* Add Game CTA */}
           <button
             onClick={onOpenAddModal}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-950 bg-emerald-400 rounded-lg hover:bg-emerald-300 transition-colors shadow-sm whitespace-nowrap shrink-0"
+            className="neon-btn-cyan flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Game</span>

@@ -3,7 +3,7 @@
   window.__PLAYVAULT_MOUNTED__ = true;
 
   var CLOAK_OPTIONS = [
-    { id: 'default', label: 'Default (PlayVault)', title: 'PlayVault — Unblocked Games Hub', faviconUrl: './favicon.ico' },
+    { id: 'default', label: 'Default (PlayVault)', title: 'PlayVault — Neon Arcade Hub', faviconUrl: './favicon.ico' },
     { id: 'classroom', label: 'Google Classroom', title: 'Classes — Google Classroom', faviconUrl: 'https://ssl.gstatic.com/classroom/favicon.png' },
     { id: 'drive', label: 'Google Drive', title: 'My Drive — Google Drive', faviconUrl: 'https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png' },
     { id: 'docs', label: 'Google Docs', title: 'Untitled Document — Google Docs', faviconUrl: 'https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico' },
@@ -38,75 +38,79 @@
     style.id = 'pv-fallback-styles';
     style.textContent = [
       '*,*::before,*::after{box-sizing:border-box}',
-      'body{margin:0;background:#090d16;color:#f1f5f9;font-family:"Plus Jakarta Sans",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow-x:hidden}',
+      'body{margin:0;background-color:#04050f;background-image:radial-gradient(circle at 18% 0%,rgba(168,85,247,0.16) 0%,transparent 45%),radial-gradient(circle at 82% 8%,rgba(34,211,238,0.14) 0%,transparent 42%),radial-gradient(rgba(56,189,248,0.08) 1px,transparent 1px);background-size:100% 100%,100% 100%,28px 28px;background-attachment:fixed;color:#f1f5f9;font-family:"Plus Jakarta Sans",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow-x:hidden}',
       'button,input,select,textarea{font:inherit;color:inherit}',
       'button{cursor:pointer;background:none;border:none}',
-      '.pv-app{min-height:100vh;display:flex;flex-direction:column;background:#090d16;color:#f1f5f9}',
-      '.pv-header{position:sticky;top:0;z-index:40;background:rgba(2,6,23,0.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(30,41,59,0.85)}',
+      '.pv-app{min-height:100vh;display:flex;flex-direction:column;color:#f1f5f9}',
+      '.pv-header{position:sticky;top:0;z-index:40;background:rgba(5,7,22,0.9);backdrop-filter:blur(12px);border-bottom:1px solid rgba(168,85,247,0.28);box-shadow:0 4px 24px rgba(34,211,238,0.08)}',
       '.pv-header-inner{max-width:1280px;margin:0 auto;padding:0 20px;height:64px;display:flex;align-items:center;justify-content:space-between;gap:24px}',
       '.pv-brand{display:flex;align-items:center;gap:10px;cursor:pointer;white-space:nowrap;flex-shrink:0}',
-      '.pv-brand-icon{width:36px;height:36px;border-radius:8px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.35);display:flex;align-items:center;justify-content:center;color:#34d399;font-weight:800}',
-      '.pv-brand-text{font-size:18px;font-weight:700;color:#fff;letter-spacing:-0.02em}',
-      '.pv-nav{display:flex;align-items:center;gap:20px;font-size:14px;font-weight:500;color:#94a3b8;overflow-x:auto}',
+      '.pv-brand-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,rgba(147,51,234,0.35),rgba(34,211,238,0.2));border:1px solid rgba(34,211,238,0.55);box-shadow:0 0 14px rgba(34,211,238,0.3);display:flex;align-items:center;justify-content:center;color:#67e8f9;font-weight:800}',
+      '.pv-brand-text{font-family:"Chakra Petch","Plus Jakarta Sans",sans-serif;font-size:20px;font-weight:700;background:linear-gradient(90deg,#67e8f9,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.02em}',
+      '.pv-nav{display:flex;align-items:center;gap:20px;font-size:14px;font-weight:500;color:#cbd5e1;overflow-x:auto}',
       '.pv-nav button{padding:4px 0;white-space:nowrap;transition:color .15s}',
       '.pv-nav button:hover{color:#fff}',
-      '.pv-nav button.active{color:#34d399;font-weight:600}',
+      '.pv-nav button.active{color:#67e8f9;font-weight:600;text-shadow:0 0 10px rgba(34,211,238,0.7)}',
       '.pv-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}',
-      '.pv-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid #334155;background:#0f172a;color:#cbd5e1;white-space:nowrap;transition:all .15s}',
-      '.pv-btn:hover{border-color:#475569;color:#fff}',
-      '.pv-btn-primary{background:#34d399;border-color:#34d399;color:#020617}',
-      '.pv-btn-primary:hover{background:#6ee7b7;border-color:#6ee7b7;color:#020617}',
-      '.pv-btn-danger{background:rgba(244,63,94,0.1);border-color:rgba(244,63,94,0.35);color:#fda4af}',
-      '.pv-btn-danger:hover{background:rgba(244,63,94,0.2);border-color:#fb7185}',
+      '.pv-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:10px;font-size:12px;font-weight:600;border:1px solid rgba(56,189,248,0.32);background:rgba(11,15,38,0.88);color:#e2e8f0;white-space:nowrap;box-shadow:0 0 10px rgba(34,211,238,0.08);transition:transform .18s,border-color .18s,box-shadow .18s}',
+      '.pv-btn:hover{border-color:rgba(34,211,238,0.8);color:#fff;box-shadow:0 0 16px rgba(34,211,238,0.35),0 0 24px rgba(168,85,247,0.2)}',
+      '.pv-btn-primary{background:linear-gradient(135deg,#22d3ee,#38bdf8);border-color:rgba(165,243,252,0.7);color:#04050f;box-shadow:0 0 14px rgba(34,211,238,0.45),0 0 26px rgba(168,85,247,0.25)}',
+      '.pv-btn-primary:hover{filter:brightness(1.08);color:#04050f;box-shadow:0 0 22px rgba(34,211,238,0.7),0 0 36px rgba(168,85,247,0.4)}',
+      '.pv-btn-purple{background:linear-gradient(135deg,#9333ea,#7c3aed);border-color:rgba(216,180,254,0.55);color:#fff;box-shadow:0 0 14px rgba(168,85,247,0.5),0 0 26px rgba(34,211,238,0.2)}',
+      '.pv-btn-purple:hover{filter:brightness(1.1);box-shadow:0 0 22px rgba(168,85,247,0.75),0 0 36px rgba(34,211,238,0.35)}',
+      '.pv-btn-danger{background:rgba(244,63,94,0.12);border-color:rgba(244,63,94,0.45);color:#fda4af}',
+      '.pv-btn-danger:hover{background:rgba(244,63,94,0.22);border-color:rgba(251,113,133,0.9);box-shadow:0 0 18px rgba(244,63,94,0.45)}',
       '.pv-main{flex:1;max-width:1280px;width:100%;margin:0 auto;padding:32px 20px}',
-      '.pv-hero{position:relative;border-radius:16px;background:linear-gradient(135deg,#0f172a,#020617);border:1px solid #1e293b;padding:28px;margin-bottom:28px;box-shadow:0 20px 40px rgba(0,0,0,0.4)}',
-      '.pv-hero-kicker{font-size:12px;font-weight:700;color:#34d399;margin-bottom:10px;display:flex;align-items:center;gap:8px}',
-      '.pv-hero h1{margin:0 0 10px;font-size:32px;font-weight:800;color:#fff;letter-spacing:-0.02em}',
+      '.pv-hero{position:relative;border-radius:16px;background:linear-gradient(135deg,#0e1230,#080b1f,#050714);border:1px solid rgba(168,85,247,0.35);padding:28px;margin-bottom:28px;box-shadow:0 20px 45px rgba(0,0,0,0.75),0 0 28px rgba(168,85,247,0.14)}',
+      '.pv-hero-kicker{font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:10px;display:flex;align-items:center;gap:8px}',
+      '.pv-hero h1{font-family:"Chakra Petch","Plus Jakarta Sans",sans-serif;margin:0 0 10px;font-size:34px;font-weight:700;color:#fff;letter-spacing:-0.02em}',
       '.pv-hero p{margin:0 0 18px;font-size:14px;color:#cbd5e1;line-height:1.6;max-width:640px}',
       '.pv-controls{display:flex;flex-direction:column;gap:14px;margin-bottom:20px}',
       '.pv-controls-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}',
       '.pv-search{position:relative;flex:1;min-width:240px;max-width:440px}',
-      '.pv-search input{width:100%;padding:9px 34px 9px 14px;background:#0f172a;border:1px solid #1e293b;border-radius:8px;font-size:14px;color:#fff;outline:none}',
-      '.pv-search input:focus{border-color:#34d399}',
+      '.pv-search input{width:100%;padding:10px 34px 10px 14px;background:#080b1f;border:1px solid rgba(168,85,247,0.3);border-radius:12px;font-size:14px;color:#fff;outline:none;transition:border-color .18s,box-shadow .18s}',
+      '.pv-search input:focus{border-color:#22d3ee;box-shadow:0 0 16px rgba(34,211,238,0.2)}',
       '.pv-sort{display:flex;align-items:center;gap:8px;font-size:12px;color:#94a3b8}',
-      '.pv-sort select{padding:7px 12px;background:#0f172a;border:1px solid #1e293b;border-radius:8px;color:#e2e8f0;font-size:12px;outline:none}',
-      '.pv-tabs{display:flex;align-items:center;gap:6px;overflow-x:auto;padding-bottom:4px}',
-      '.pv-tab{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:500;color:#94a3b8;white-space:nowrap;border:1px solid transparent}',
-      '.pv-tab:hover{color:#e2e8f0;background:rgba(15,23,42,0.7)}',
-      '.pv-tab.active{background:#1e293b;color:#34d399;border-color:rgba(16,185,129,0.3)}',
-      '.pv-meta-bar{display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid rgba(30,41,59,0.8);margin-bottom:20px;font-size:12px;color:#94a3b8}',
+      '.pv-sort select{padding:8px 12px;background:#080b1f;border:1px solid rgba(168,85,247,0.3);border-radius:12px;color:#e2e8f0;font-size:12px;outline:none}',
+      '.pv-tabs{display:flex;align-items:center;gap:8px;overflow-x:auto;padding-bottom:4px}',
+      '.pv-tab{padding:7px 14px;border-radius:12px;font-size:12px;font-weight:600;color:#94a3b8;white-space:nowrap;border:1px solid rgba(168,85,247,0.16);background:rgba(8,11,31,0.65);transition:all .18s}',
+      '.pv-tab:hover{color:#fff;border-color:rgba(168,85,247,0.45)}',
+      '.pv-tab.active{background:linear-gradient(90deg,rgba(34,211,238,0.2),rgba(168,85,247,0.24));color:#67e8f9;border-color:rgba(34,211,238,0.6);box-shadow:0 0 14px rgba(34,211,238,0.22)}',
+      '.pv-meta-bar{display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid rgba(168,85,247,0.2);margin-bottom:20px;font-size:12px;color:#94a3b8}',
       '.pv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}',
-      '.pv-card{display:flex;flex-direction:column;background:rgba(15,23,42,0.92);border:1px solid #1e293b;border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .18s,border-color .18s,box-shadow .18s}',
-      '.pv-card:hover{transform:translateY(-4px);border-color:#334155;box-shadow:0 18px 32px rgba(0,0,0,0.45)}',
-      '.pv-card-thumb{position:relative;aspect-ratio:16/10;background:#020617;display:flex;align-items:center;justify-content:center;padding:16px}',
-      '.pv-card-badge{font-size:28px;font-weight:800;letter-spacing:-0.03em}',
-      '.pv-fav-btn{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:6px;background:rgba(2,6,23,0.75);color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:14px}',
-      '.pv-fav-btn.active{background:rgba(251,191,36,0.2);color:#fbbf24}',
+      '.pv-card{position:relative;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(13,17,43,0.96),rgba(7,9,24,0.98));border:1px solid rgba(139,92,246,0.24);border-radius:16px;overflow:hidden;cursor:pointer;transition:transform .24s cubic-bezier(0.16,1,0.3,1),border-color .24s,box-shadow .24s;box-shadow:0 10px 26px -8px rgba(0,0,0,0.75)}',
+      '.pv-card:hover{transform:translateY(-6px) scale(1.01);border-color:rgba(34,211,238,0.75);box-shadow:0 20px 38px -10px rgba(0,0,0,0.85),0 0 22px rgba(34,211,238,0.28),0 0 38px rgba(168,85,247,0.24)}',
+      '.pv-card-thumb{position:relative;aspect-ratio:16/10;background:#050716;border-bottom:1px solid rgba(168,85,247,0.2);display:flex;align-items:center;justify-content:center;padding:16px}',
+      '.pv-card-badge{font-family:"Chakra Petch",sans-serif;font-size:30px;font-weight:700;letter-spacing:-0.03em;transition:transform .24s}',
+      '.pv-card:hover .pv-card-badge{transform:scale(1.1)}',
+      '.pv-fav-btn{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:8px;border:1px solid rgba(34,211,238,0.28);background:rgba(5,7,22,0.8);color:#cbd5e1;display:flex;align-items:center;justify-content:center;font-size:14px}',
+      '.pv-fav-btn.active{background:rgba(168,85,247,0.25);border-color:rgba(168,85,247,0.65);color:#fcd34d;box-shadow:0 0 12px rgba(168,85,247,0.4)}',
       '.pv-card-body{padding:16px;display:flex;flex-direction:column;flex:1}',
       '.pv-card-meta{font-size:12px;color:#94a3b8;margin-bottom:6px;display:flex;gap:6px;align-items:center}',
-      '.pv-card-title{margin:0 0 6px;font-size:16px;font-weight:700;color:#fff}',
+      '.pv-card-title{font-family:"Chakra Petch","Plus Jakarta Sans",sans-serif;margin:0 0 6px;font-size:16px;font-weight:700;color:#fff;transition:color .2s}',
+      '.pv-card:hover .pv-card-title{color:#67e8f9}',
       '.pv-card-desc{margin:0 0 12px;font-size:12px;color:#94a3b8;line-height:1.5;flex:1}',
-      '.pv-card-foot{padding-top:10px;border-top:1px solid rgba(30,41,59,0.8);display:flex;justify-content:space-between;font-size:11px;color:#64748b}',
+      '.pv-card-foot{padding-top:10px;border-top:1px solid rgba(168,85,247,0.16);display:flex;justify-content:space-between;font-size:11px;color:#94a3b8}',
       '.pv-theater{display:flex;flex-direction:column;gap:20px}',
-      '.pv-player-box{background:#020617;border:1px solid #1e293b;border-radius:12px;overflow:hidden;box-shadow:0 24px 48px rgba(0,0,0,0.5)}',
-      '.pv-player-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#0f172a;border-bottom:1px solid #1e293b}',
-      '.pv-player-frame{width:100%;height:min(78vh,580px);background:#020617}',
+      '.pv-player-box{background:#04050f;border:1px solid rgba(168,85,247,0.35);border-radius:16px;overflow:hidden;box-shadow:0 24px 48px rgba(0,0,0,0.7),0 0 28px rgba(34,211,238,0.14)}',
+      '.pv-player-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#090c22;border-bottom:1px solid rgba(168,85,247,0.25)}',
+      '.pv-player-frame{width:100%;height:min(78vh,580px);background:#04050f}',
       '.pv-player-frame iframe{width:100%;height:100%;border:none}',
       '.pv-details-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}',
       '@media(max-width:900px){.pv-details-grid{grid-template-columns:1fr}.pv-nav{display:none}}',
-      '.pv-panel{background:rgba(15,23,42,0.75);border:1px solid #1e293b;border-radius:12px;padding:20px}',
-      '.pv-modal-backdrop{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;padding:16px}',
-      '.pv-modal{width:100%;max-width:680px;max-height:90vh;overflow:auto;background:#0f172a;border:1px solid #334155;border-radius:12px;padding:20px}',
-      '.pv-field{width:100%;padding:9px 12px;background:#020617;border:1px solid #334155;border-radius:8px;color:#fff;font-size:13px;outline:none}',
-      '.pv-field:focus{border-color:#34d399}',
+      '.pv-panel{background:rgba(8,11,31,0.9);border:1px solid rgba(168,85,247,0.25);border-radius:16px;padding:20px}',
+      '.pv-modal-backdrop{position:fixed;inset:0;z-index:50;background:rgba(2,3,10,0.85);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px}',
+      '.pv-modal{width:100%;max-width:680px;max-height:90vh;overflow:auto;background:#080b1f;border:1px solid rgba(168,85,247,0.4);border-radius:16px;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,0.9),0 0 32px rgba(168,85,247,0.2)}',
+      '.pv-field{width:100%;padding:9px 12px;background:#04050f;border:1px solid rgba(168,85,247,0.35);border-radius:10px;color:#fff;font-size:13px;outline:none}',
+      '.pv-field:focus{border-color:#22d3ee}',
       '.pv-dropdown{position:relative}',
-      '.pv-dropdown-menu{position:absolute;right:0;top:100%;margin-top:8px;width:220px;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:6px 0;z-index:60;box-shadow:0 16px 32px rgba(0,0,0,0.5)}',
+      '.pv-dropdown-menu{position:absolute;right:0;top:100%;margin-top:8px;width:220px;background:#0a0e26;border:1px solid rgba(168,85,247,0.4);border-radius:12px;padding:6px 0;z-index:60;box-shadow:0 16px 32px rgba(0,0,0,0.75)}',
       '.pv-dropdown-item{width:100%;text-align:left;padding:8px 12px;font-size:12px;color:#cbd5e1;display:flex;justify-content:space-between;align-items:center}',
-      '.pv-dropdown-item:hover{background:#1e293b}',
-      '.pv-footer{margin-top:auto;border-top:1px solid rgba(30,41,59,0.8);background:#020617;padding:24px 20px;font-size:12px;color:#64748b}',
+      '.pv-dropdown-item:hover{background:rgba(168,85,247,0.18)}',
+      '.pv-footer{margin-top:auto;border-top:1px solid rgba(168,85,247,0.2);background:rgba(4,5,15,0.95);padding:24px 20px;font-size:12px;color:#94a3b8}',
       '.pv-footer-inner{max-width:1280px;margin:0 auto;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}',
       '.pv-panic{position:fixed;inset:0;z-index:100;background:#f8f9fa;color:#1e293b;display:flex;flex-direction:column;overflow:auto}',
-      'pre.pv-json{background:#020617;border:1px solid #1e293b;border-radius:8px;padding:14px;overflow:auto;max-height:420px;font-size:12px;color:#6ee7b7;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}'
+      'pre.pv-json{background:#04050f;border:1px solid rgba(168,85,247,0.25);border-radius:12px;padding:14px;overflow:auto;max-height:420px;font-size:12px;color:#67e8f9;font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}'
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -203,7 +207,6 @@
     var spotlight = state.games.find(function (g) { return g.id === 'snake'; }) || state.games[0];
 
     var html = '<div class="pv-app">';
-    // Header
     html += '<header class="pv-header"><div class="pv-header-inner">';
     html += '<div class="pv-brand" id="pv-home"><div class="pv-brand-icon">PV</div><span class="pv-brand-text">PlayVault</span></div>';
     html += '<nav class="pv-nav">';
@@ -235,18 +238,18 @@
       var isFav = state.favorites.indexOf(g.id) !== -1;
       html += '<div class="pv-theater">';
       html += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#94a3b8">';
-      html += '<button id="pv-back-btn" style="color:#e2e8f0;font-weight:600">← Back to All Games</button>';
+      html += '<button id="pv-back-btn" style="color:#67e8f9;font-weight:600">← Back to All Games</button>';
       html += '<span>' + escapeHtml(g.category) + ' · ' + escapeHtml(g.title) + '</span></div>';
 
       html += '<div id="pv-player-box" class="pv-player-box">';
       html += '<div class="pv-player-bar">';
-      html += '<div style="font-weight:700;color:#fff;font-size:14px">' + escapeHtml(g.title) + ' <span style="color:#94a3b8;font-weight:400">· ' + escapeHtml(g.category) + '</span></div>';
+      html += '<div style="font-weight:700;color:#fff;font-size:14px">' + escapeHtml(g.title) + ' <span style="color:#67e8f9;font-weight:400">· ' + escapeHtml(g.category) + '</span></div>';
       html += '<div style="display:flex;gap:8px;align-items:center">';
       html += '<button id="pv-reload-btn" class="pv-btn">Restart</button>';
       html += '<button id="pv-theater-fav" class="pv-btn">' + (isFav ? '★ Favorited' : '☆ Favorite') + '</button>';
       html += '<button id="pv-popout-btn" class="pv-btn">Popout</button>';
       html += '<button id="pv-share-btn" class="pv-btn">' + (state.copiedShare ? 'Copied!' : 'Share') + '</button>';
-      html += '<button id="pv-fullscreen-btn" class="pv-btn pv-btn-primary">Fullscreen</button>';
+      html += '<button id="pv-fullscreen-btn" class="pv-btn pv-btn-purple">Fullscreen</button>';
       html += '</div></div>';
       html += '<div class="pv-player-frame"><iframe id="pv-game-iframe" src="' + escapeHtml(iframeSrc) + '" title="' + escapeHtml(g.title) + '" allow="fullscreen; autoplay; gamepad" allowfullscreen></iframe></div>';
       html += '</div>';
@@ -254,22 +257,22 @@
       html += '<div class="pv-details-grid">';
       html += '<div class="pv-panel"><h2 style="margin:0 0 8px;color:#fff;font-size:20px">' + escapeHtml(g.title) + '</h2>';
       html += '<p style="color:#cbd5e1;font-size:14px;line-height:1.6">' + escapeHtml(g.description) + '</p>';
-      html += '<div style="background:#020617;border:1px solid #1e293b;border-radius:8px;padding:12px;margin-top:14px"><div style="font-size:11px;font-weight:700;color:#34d399;text-transform:uppercase;margin-bottom:4px">Controls</div><div style="font-size:12px;color:#cbd5e1;font-family:monospace">' + escapeHtml(g.controls) + '</div></div>';
-      html += '<div style="margin-top:12px;font-size:11px;color:#64748b;word-break:break-all"><strong>Iframe:</strong> <code>' + escapeHtml(g.iframe) + '</code></div>';
+      html += '<div style="background:#04050f;border:1px solid rgba(34,211,238,0.25);border-radius:10px;padding:12px;margin-top:14px"><div style="font-size:11px;font-weight:700;color:#67e8f9;text-transform:uppercase;margin-bottom:4px">Controls (Keyboard, Mouse &amp; Touch)</div><div style="font-size:12px;color:#e2e8f0;font-family:monospace">' + escapeHtml(g.controls) + '</div></div>';
+      html += '<div style="margin-top:12px;font-size:11px;color:#94a3b8;word-break:break-all"><strong>Iframe:</strong> <code style="color:#67e8f9">' + escapeHtml(g.iframe) + '</code></div>';
       html += '</div>';
 
-      html += '<div class="pv-panel"><div style="font-size:12px;font-weight:700;color:#cbd5e1;text-transform:uppercase;margin-bottom:10px">More to Play</div>';
+      html += '<div class="pv-panel"><div style="font-size:12px;font-weight:700;color:#67e8f9;text-transform:uppercase;margin-bottom:10px">More to Play</div>';
       state.games.filter(function (x) { return x.id !== g.id; }).slice(0, 4).forEach(function (rel) {
-        html += '<div data-select-game="' + escapeHtml(rel.id) + '" style="padding:10px;border:1px solid #1e293b;border-radius:8px;margin-bottom:8px;cursor:pointer;background:#020617"><div style="font-size:13px;font-weight:700;color:#fff">' + escapeHtml(rel.title) + '</div><div style="font-size:11px;color:#94a3b8">' + escapeHtml(rel.category) + ' · ★ ' + Number(rel.rating || 5).toFixed(1) + '</div></div>';
+        html += '<div data-select-game="' + escapeHtml(rel.id) + '" style="padding:10px;border:1px solid rgba(168,85,247,0.22);border-radius:10px;margin-bottom:8px;cursor:pointer;background:#050716"><div style="font-size:13px;font-weight:700;color:#fff">' + escapeHtml(rel.title) + '</div><div style="font-size:11px;color:#94a3b8">' + escapeHtml(rel.category) + ' · ★ ' + Number(rel.rating || 5).toFixed(1) + '</div></div>';
       });
       html += '</div></div></div>';
     } else {
       if (state.selectedCategory === 'All' && !state.searchQuery && spotlight) {
-        html += '<div class="pv-hero"><div class="pv-hero-kicker">POPULAR UNBLOCKED SPOTLIGHT · ' + escapeHtml(spotlight.category) + '</div>';
+        html += '<div class="pv-hero"><div class="pv-hero-kicker">Featured Neon Arcade Spotlight · ' + escapeHtml(spotlight.category) + '</div>';
         html += '<h1>' + escapeHtml(spotlight.title) + '</h1>';
         html += '<p>' + escapeHtml(spotlight.description) + '</p>';
         html += '<div style="display:flex;align-items:center;gap:16px"><button id="pv-spotlight-play" class="pv-btn pv-btn-primary" style="padding:10px 18px;font-size:14px">Play Instantly →</button>';
-        html += '<span style="font-size:12px;color:#94a3b8">★ ' + Number(spotlight.rating || 5).toFixed(1) + ' · ' + Number(spotlight.playedCount || 0).toLocaleString() + ' plays</span></div></div>';
+        html += '<span style="font-size:12px;color:#cbd5e1">★ ' + Number(spotlight.rating || 5).toFixed(1) + ' · ' + Number(spotlight.playedCount || 0).toLocaleString() + ' plays</span></div></div>';
       }
 
       html += '<div class="pv-controls"><div class="pv-controls-row">';
@@ -282,7 +285,7 @@
       });
       html += '</div></div>';
 
-      html += '<div class="pv-meta-bar"><span>Showing <strong style="color:#fff">' + filtered.length + '</strong> games</span><span>Press <kbd style="background:#0f172a;border:1px solid #334155;border-radius:4px;padding:1px 6px">Esc</kbd> anytime for Panic Cloak</span></div>';
+      html += '<div class="pv-meta-bar"><span>Showing <strong style="color:#67e8f9">' + filtered.length + '</strong> games</span><span>Press <kbd style="background:#0a0e26;border:1px solid rgba(168,85,247,0.4);border-radius:4px;padding:1px 6px;color:#67e8f9">Esc</kbd> anytime for Panic Cloak</span></div>';
 
       if (state.loading) {
         html += '<div style="padding:40px;text-align:center;color:#94a3b8">Loading games from games.json...</div>';
@@ -293,17 +296,16 @@
         filtered.forEach(function (game) {
           var fav = state.favorites.indexOf(game.id) !== -1;
           var plays = game.playedCount >= 1000 ? (game.playedCount / 1000).toFixed(1) + 'k' : String(game.playedCount || 0);
-          var accent = game.accentColor || '#34d399';
           html += '<div class="pv-card" data-open-game="' + escapeHtml(game.id) + '">';
-          html += '<div class="pv-card-thumb" style="background:radial-gradient(circle at center,' + accent + '26 0%,#020617 75%)">';
-          html += '<span class="pv-card-badge" style="color:' + accent + '">' + escapeHtml((game.title || '').slice(0, 2).toUpperCase()) + '</span>';
+          html += '<div class="pv-card-thumb" style="background:radial-gradient(circle at 35% 40%,rgba(34,211,238,0.18),rgba(168,85,247,0.14) 55%,#050716 85%)">';
+          html += '<span class="pv-card-badge" style="color:#67e8f9;text-shadow:0 0 14px rgba(168,85,247,0.65)">' + escapeHtml((game.title || '').slice(0, 2).toUpperCase()) + '</span>';
           html += '<button class="pv-fav-btn ' + (fav ? 'active' : '') + '" data-fav-id="' + escapeHtml(game.id) + '" title="Favorite">' + (fav ? '★' : '☆') + '</button>';
           html += '</div>';
           html += '<div class="pv-card-body">';
-          html += '<div class="pv-card-meta"><span>' + escapeHtml(game.category) + '</span><span>·</span><span style="color:#fbbf24">★ ' + Number(game.rating || 5).toFixed(1) + '</span><span>·</span><span>' + plays + ' plays</span></div>';
+          html += '<div class="pv-card-meta"><span style="color:#67e8f9">' + escapeHtml(game.category) + '</span><span>·</span><span style="color:#fcd34d">★ ' + Number(game.rating || 5).toFixed(1) + '</span><span>·</span><span>' + plays + ' plays</span></div>';
           html += '<h3 class="pv-card-title">' + escapeHtml(game.title) + '</h3>';
           html += '<p class="pv-card-desc">' + escapeHtml(game.description) + '</p>';
-          html += '<div class="pv-card-foot"><span>' + escapeHtml((game.controls || '').split('·')[0]) + '</span><span style="color:#34d399;font-weight:700">Play →</span></div>';
+          html += '<div class="pv-card-foot"><span>' + escapeHtml((game.controls || '').split('·')[0]) + '</span><span style="color:#c084fc;font-weight:700">Play →</span></div>';
           html += '</div></div>';
         });
         html += '</div>';
@@ -311,7 +313,7 @@
     }
 
     html += '</main>';
-    html += '<footer class="pv-footer"><div class="pv-footer-inner"><span><strong style="color:#cbd5e1">PlayVault</strong> · Unblocked Games Portal · All games stored as iframes in JSON</span><div style="display:flex;gap:16px"><button id="pv-foot-json">Inspect games.json</button><button id="pv-foot-add">Add Game Iframe</button></div></div></footer>';
+    html += '<footer class="pv-footer"><div class="pv-footer-inner"><span><strong style="color:#67e8f9">PlayVault</strong> · Neon Arcade Portal · All games stored as iframes in JSON</span><div style="display:flex;gap:16px"><button id="pv-foot-json">Inspect games.json</button><button id="pv-foot-add">Add Game Iframe</button></div></div></footer>';
 
     if (state.isAddModalOpen) {
       html += '<div class="pv-modal-backdrop" id="pv-modal-bg"><div class="pv-modal" onclick="event.stopPropagation()">';
@@ -330,7 +332,7 @@
       var jsonStr = JSON.stringify(state.games, null, 2);
       html += '<div class="pv-modal-backdrop" id="pv-modal-bg"><div class="pv-modal" onclick="event.stopPropagation()">';
       html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h2 style="margin:0;color:#fff;font-size:18px">games.json (' + state.games.length + ' games)</h2><button id="pv-close-json" class="pv-btn">✕</button></div>';
-      html += '<div style="display:flex;gap:8px;margin-bottom:12px"><button id="pv-copy-json" class="pv-btn">' + (state.copiedJson ? 'Copied!' : 'Copy JSON') + '</button><button id="pv-download-json" class="pv-btn pv-btn-primary">Download games.json</button></div>';
+      html += '<div style="display:flex;gap:8px;margin-bottom:12px"><button id="pv-copy-json" class="pv-btn">' + (state.copiedJson ? 'Copied!' : 'Copy JSON') + '</button><button id="pv-download-json" class="pv-btn pv-btn-purple">Download games.json</button></div>';
       html += '<pre class="pv-json">' + escapeHtml(jsonStr) + '</pre>';
       html += '</div></div>';
     }
@@ -496,12 +498,12 @@
         title: title,
         category: cat,
         description: desc || 'Custom user added web game embed.',
-        controls: controls || 'Click or use standard keyboard controls',
+        controls: controls || 'Click, tap, or use standard keyboard controls',
         iframe: formattedIframe,
         rating: 5.0,
         playedCount: 1,
         tags: [cat, 'Custom'],
-        accentColor: '#10b981',
+        accentColor: '#22d3ee',
         isCustom: true
       };
       state.games.unshift(newGame);

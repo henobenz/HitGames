@@ -29,7 +29,6 @@ export default function App() {
   const [isPanicOpen, setIsPanicOpen] = useState(false);
   const [currentCloak, setCurrentCloak] = useState('default');
 
-  // Load games from /games.json and localStorage
   useEffect(() => {
     async function loadGames() {
       try {
@@ -42,7 +41,6 @@ export default function App() {
           initialGames = await res.json();
         }
 
-        // Merge custom games from localStorage
         const storedCustom = localStorage.getItem('playvault_custom_games');
         if (storedCustom) {
           try {
@@ -55,7 +53,6 @@ export default function App() {
 
         setGames(initialGames);
 
-        // Check if URL specifies a game
         const urlParams = new URLSearchParams(window.location.search);
         const gameParam = urlParams.get('game');
         if (gameParam) {
@@ -73,7 +70,6 @@ export default function App() {
 
     loadGames();
 
-    // Load favorites
     const storedFavs = localStorage.getItem('playvault_favorites');
     if (storedFavs) {
       try {
@@ -81,7 +77,6 @@ export default function App() {
       } catch (e) {}
     }
 
-    // Load cloak preference
     const storedCloak = localStorage.getItem('playvault_cloak');
     if (storedCloak) {
       const option = CLOAK_OPTIONS.find(o => o.id === storedCloak);
@@ -91,7 +86,6 @@ export default function App() {
     }
   }, []);
 
-  // Global Panic Key Listener (Esc or `)
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
       if (e.key === 'Escape' || e.key === '`') {
@@ -104,13 +98,11 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [isPanicOpen]);
 
-  // Tab Cloaking logic
   const applyCloak = (option) => {
     setCurrentCloak(option.id);
     localStorage.setItem('playvault_cloak', option.id);
     document.title = option.title;
 
-    // Change favicon
     let link = document.querySelector("link[rel*='icon']");
     if (!link) {
       link = document.createElement('link');
@@ -133,7 +125,6 @@ export default function App() {
   const handleAddGame = (newGame) => {
     setGames(prev => [newGame, ...prev]);
 
-    // Save to custom games localStorage
     const storedCustom = localStorage.getItem('playvault_custom_games');
     let currentCustom = [];
     if (storedCustom) {
@@ -147,16 +138,13 @@ export default function App() {
 
   const handleImportJson = (importedList) => {
     setGames(importedList);
-    // Also save custom games to localStorage
     const customOnly = importedList.filter(g => g.isCustom);
     localStorage.setItem('playvault_custom_games', JSON.stringify(customOnly));
   };
 
-  // Filter & Sort
   const filteredGames = useMemo(() => {
     return games
       .filter(game => {
-        // Category filter
         if (selectedCategory === 'Featured') {
           if (!game.featured) return false;
         } else if (selectedCategory === 'Favorites') {
@@ -165,7 +153,6 @@ export default function App() {
           if (game.category.toLowerCase() !== selectedCategory.toLowerCase()) return false;
         }
 
-        // Search query filter
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase().trim();
           const matchTitle = game.title.toLowerCase().includes(q);
@@ -202,12 +189,12 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#090d16] text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300">
+    <div className="min-h-screen flex flex-col text-slate-100 selection:bg-cyan-400/30 selection:text-cyan-200">
       
       {/* Panic Cloak Fullscreen Screen */}
       <PanicOverlay isOpen={isPanicOpen} onExit={() => setIsPanicOpen(false)} />
 
-      {/* Top 3-Zone Navigation */}
+      {/* Top Navigation */}
       <Navbar
         currentCategory={selectedCategory}
         onSelectCategory={(cat) => {
@@ -223,7 +210,6 @@ export default function App() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* If Game is Selected: Theater Player View */}
         {selectedGame ? (
           <TheaterPlayer
             game={selectedGame}
@@ -231,7 +217,6 @@ export default function App() {
             onToggleFavorite={handleToggleFavorite}
             onClose={() => {
               setSelectedGame(null);
-              // Clean query param
               const url = new URL(window.location.href);
               url.searchParams.delete('game');
               window.history.replaceState({}, '', url.toString());
@@ -240,23 +225,23 @@ export default function App() {
             allGames={games}
           />
         ) : (
-          /* Catalog Browse View */
           <div className="flex flex-col gap-8">
             
             {/* Hero Spotlight Section */}
             {selectedCategory === 'All' && !searchQuery && featuredSpotlight && (
-              <div className="relative rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-950 border border-slate-800 p-6 sm:p-8 overflow-hidden shadow-2xl">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+              <div className="relative rounded-2xl bg-gradient-to-br from-[#0e1230] via-[#080b1f] to-[#050714] border border-purple-500/35 p-6 sm:p-8 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.75),0_0_32px_rgba(168,85,247,0.14)]">
+                <div className="absolute -top-20 right-10 w-80 h-80 bg-cyan-400/15 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-24 left-1/3 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
                 
                 <div className="relative z-10 max-w-2xl flex flex-col gap-3">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
-                    <Flame className="w-4 h-4 text-emerald-400" />
-                    <span>POPULAR UNBLOCKED SPOTLIGHT</span>
-                    <span aria-hidden="true" className="text-slate-600">·</span>
-                    <span className="text-slate-400">{featuredSpotlight.category}</span>
+                  <div className="flex items-center gap-2 text-xs font-semibold text-cyan-300">
+                    <Flame className="w-4 h-4 text-purple-400" />
+                    <span>Featured Neon Arcade Spotlight</span>
+                    <span aria-hidden="true" className="text-purple-400/50">·</span>
+                    <span className="text-slate-300">{featuredSpotlight.category}</span>
                   </div>
 
-                  <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white text-balance">
+                  <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-white text-balance drop-shadow-[0_0_16px_rgba(34,211,238,0.22)]">
                     {featuredSpotlight.title}
                   </h1>
 
@@ -264,18 +249,18 @@ export default function App() {
                     {featuredSpotlight.description}
                   </p>
 
-                  <div className="flex items-center gap-4 pt-2">
+                  <div className="flex flex-wrap items-center gap-4 pt-2">
                     <button
                       onClick={() => setSelectedGame(featuredSpotlight)}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-400 text-slate-950 font-bold text-sm hover:bg-emerald-300 transition-all shadow-lg hover:shadow-emerald-500/20 cursor-pointer"
+                      className="neon-btn-cyan flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm cursor-pointer"
                     >
                       <span>Play Instantly</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                     
-                    <div className="flex items-center gap-2 text-xs text-slate-400">
-                      <span>★ {featuredSpotlight.rating.toFixed(1)}</span>
-                      <span aria-hidden="true">·</span>
+                    <div className="flex items-center gap-2 text-xs text-slate-300 tabular-nums">
+                      <span className="text-amber-300 font-semibold">★ {featuredSpotlight.rating.toFixed(1)}</span>
+                      <span aria-hidden="true" className="text-purple-400/60">·</span>
                       <span>{featuredSpotlight.playedCount.toLocaleString()} plays</span>
                     </div>
                   </div>
@@ -289,18 +274,18 @@ export default function App() {
                 
                 {/* Search Input */}
                 <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400/80 pointer-events-none" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search games, tags, or categories..."
-                    className="w-full pl-9 pr-9 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 transition-colors"
+                    className="w-full pl-10 pr-9 py-2.5 bg-[#080b1f]/90 border border-purple-500/30 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_16px_rgba(34,211,238,0.2)] transition-all"
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-cyan-300 cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -309,12 +294,12 @@ export default function App() {
 
                 {/* Sort selector */}
                 <div className="flex items-center gap-2 shrink-0">
-                  <SlidersHorizontal className="w-4 h-4 text-slate-400" />
+                  <SlidersHorizontal className="w-4 h-4 text-purple-400" />
                   <span className="text-xs text-slate-400">Sort:</span>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs font-medium text-slate-200 focus:outline-none focus:border-emerald-400 cursor-pointer"
+                    className="px-3 py-2 bg-[#080b1f] border border-purple-500/30 rounded-xl text-xs font-medium text-slate-100 focus:outline-none focus:border-cyan-400 cursor-pointer"
                   >
                     <option value="popular">Most Popular</option>
                     <option value="rating">Highest Rated</option>
@@ -325,46 +310,49 @@ export default function App() {
               </div>
 
               {/* Category Segmented Tabs */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                {CATEGORIES.map(category => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
-                      selectedCategory === category
-                        ? 'bg-slate-800 text-emerald-400 border border-emerald-500/30'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-                    }`}
-                  >
-                    {category}
-                    {category === 'Favorites' && favorites.length > 0 && (
-                      <span className="ml-1 text-[10px] text-amber-400">({favorites.length})</span>
-                    )}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {CATEGORIES.map(category => {
+                  const active = selectedCategory === category;
+                  return (
+                    <button
+                      key={category}
+                      onClick={() => setSelectedCategory(category)}
+                      className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+                        active
+                          ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/25 text-cyan-300 border border-cyan-400/60 shadow-[0_0_14px_rgba(34,211,238,0.22)]'
+                          : 'bg-[#080b1f]/60 text-slate-400 border border-purple-500/15 hover:text-white hover:border-purple-400/40'
+                      }`}
+                    >
+                      {category}
+                      {category === 'Favorites' && favorites.length > 0 && (
+                        <span className="ml-1 text-[10px] text-amber-300 tabular-nums">({favorites.length})</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             {/* Results Counter & Meta */}
-            <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-slate-800/80">
-              <div className="flex items-center gap-2">
-                <span>Showing <strong className="text-white font-semibold">{filteredGames.length}</strong> games</span>
+            <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-purple-500/20">
+              <div className="flex items-center gap-2 tabular-nums">
+                <span>Showing <strong className="text-cyan-300 font-semibold">{filteredGames.length}</strong> games</span>
                 {searchQuery && (
                   <>
-                    <span aria-hidden="true">·</span>
+                    <span aria-hidden="true" className="text-purple-400/50">·</span>
                     <span>Query: &ldquo;{searchQuery}&rdquo;</span>
                   </>
                 )}
                 {selectedCategory !== 'All' && (
                   <>
-                    <span aria-hidden="true">·</span>
+                    <span aria-hidden="true" className="text-purple-400/50">·</span>
                     <span>Category: {selectedCategory}</span>
                   </>
                 )}
               </div>
 
-              <div className="text-[11px] text-slate-500 hidden sm:block">
-                Press <kbd className="px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded font-mono text-[10px] text-slate-300">Esc</kbd> anytime for Panic Cloak
+              <div className="text-[11px] text-slate-400 hidden sm:block">
+                Press <kbd className="px-1.5 py-0.5 bg-[#0a0e26] border border-purple-500/40 rounded font-mono text-[10px] text-cyan-300">Esc</kbd> anytime for Panic Cloak
               </div>
             </div>
 
@@ -372,7 +360,7 @@ export default function App() {
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="h-64 rounded-xl bg-slate-900/40 border border-slate-800 animate-pulse" />
+                  <div key={i} className="h-64 rounded-2xl bg-[#0a0d22]/70 border border-purple-500/20 animate-pulse" />
                 ))}
               </div>
             ) : filteredGames.length > 0 ? (
@@ -389,11 +377,11 @@ export default function App() {
               </div>
             ) : (
               /* Empty Search / Filter State */
-              <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-slate-900/40 rounded-xl border border-slate-800/80">
-                <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 mb-3">
+              <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-[#080b1f]/80 rounded-2xl border border-purple-500/25">
+                <div className="w-12 h-12 rounded-xl bg-purple-500/15 border border-purple-400/40 flex items-center justify-center text-cyan-300 mb-3 shadow-[0_0_16px_rgba(168,85,247,0.3)]">
                   <Gamepad2 className="w-6 h-6" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-1">No Games Found</h3>
+                <h3 className="font-display text-base font-bold text-white mb-1">No Games Found</h3>
                 <p className="text-xs text-slate-400 max-w-sm mb-4">
                   {selectedCategory === 'Favorites'
                     ? "You haven't bookmarked any games yet. Click the star icon on any game to pin it here!"
@@ -406,14 +394,14 @@ export default function App() {
                         setSearchQuery('');
                         setSelectedCategory('All');
                       }}
-                      className="px-3.5 py-1.5 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
+                      className="neon-btn-outline px-4 py-2 text-xs font-semibold rounded-xl cursor-pointer"
                     >
                       Reset Filters
                     </button>
                   )}
                   <button
                     onClick={() => setIsAddModalOpen(true)}
-                    className="px-3.5 py-1.5 text-xs font-semibold text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                    className="neon-btn-cyan px-4 py-2 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Add Custom Game</span>
@@ -428,29 +416,29 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-slate-800/80 bg-slate-950 py-8 text-xs text-slate-500">
+      <footer className="mt-auto border-t border-purple-500/20 bg-[#04050f]/95 py-8 text-xs text-slate-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-300">PlayVault</span>
-            <span aria-hidden="true">·</span>
-            <span>Unblocked Games Portal</span>
-            <span aria-hidden="true">·</span>
+            <span className="font-display font-bold text-cyan-300">PlayVault</span>
+            <span aria-hidden="true" className="text-purple-400/50">·</span>
+            <span>Neon Arcade Portal</span>
+            <span aria-hidden="true" className="text-purple-400/50">·</span>
             <span>All games stored as client-side iframes</span>
           </div>
 
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsJsonModalOpen(true)}
-              className="hover:text-slate-300 transition-colors flex items-center gap-1 cursor-pointer"
+              className="hover:text-cyan-300 transition-colors flex items-center gap-1 cursor-pointer"
             >
-              <Code2 className="w-3.5 h-3.5 text-sky-400" />
+              <Code2 className="w-3.5 h-3.5 text-cyan-400" />
               <span>Inspect games.json</span>
             </button>
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="hover:text-slate-300 transition-colors flex items-center gap-1 cursor-pointer"
+              className="hover:text-purple-300 transition-colors flex items-center gap-1 cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5 text-emerald-400" />
+              <Plus className="w-3.5 h-3.5 text-purple-400" />
               <span>Add Game Iframe</span>
             </button>
             <button
@@ -463,14 +451,12 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Add Game Modal */}
       <AddGameModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onAddGame={handleAddGame}
       />
 
-      {/* JSON Viewer Modal */}
       <JsonViewerModal
         isOpen={isJsonModalOpen}
         onClose={() => setIsJsonModalOpen(false)}

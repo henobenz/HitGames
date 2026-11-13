@@ -15,10 +15,13 @@ export const GameCard = ({
   return (
     <div
       onClick={() => onSelectGame(game)}
-      className="group relative flex flex-col bg-slate-900/90 rounded-xl border border-slate-800 hover:border-slate-700 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/40 cursor-pointer overflow-hidden"
+      className="arcade-card group flex flex-col cursor-pointer overflow-hidden"
     >
+      {/* Animated Diagonal Light Sheen on Hover */}
+      <div className="arcade-card-sheen z-20" />
+
       {/* Visual Thumbnail / Vector Preview */}
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-950">
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#050716] rounded-t-2xl border-b border-purple-500/20">
         <GameIcon 
           id={game.id} 
           category={game.category} 
@@ -27,9 +30,9 @@ export const GameCard = ({
         />
 
         {/* Hover Play Button Overlay */}
-        <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-xs">
-          <div className="w-12 h-12 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
-            <Play className="w-5 h-5 fill-current ml-0.5" />
+        <div className="absolute inset-0 bg-[#040510]/65 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center backdrop-blur-[2px]">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-purple-500 text-[#04050f] flex items-center justify-center shadow-[0_0_24px_rgba(34,211,238,0.75),0_0_36px_rgba(168,85,247,0.55)] transform scale-75 group-hover:scale-100 transition-transform duration-200">
+            <Play className="w-5 h-5 fill-current ml-0.5 text-white drop-shadow" />
           </div>
         </div>
 
@@ -38,29 +41,29 @@ export const GameCard = ({
           type="button"
           onClick={(e) => onToggleFavorite(game.id, e)}
           title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-          className={`absolute top-2.5 right-2.5 p-1.5 rounded-md transition-colors backdrop-blur-md ${
+          className={`absolute top-2.5 right-2.5 z-10 p-1.5 rounded-lg border transition-all backdrop-blur-md cursor-pointer ${
             isFavorite
-              ? 'bg-amber-400/20 text-amber-300'
-              : 'bg-slate-950/60 text-slate-400 hover:text-white'
+              ? 'bg-purple-500/25 border-purple-400/60 text-amber-300 shadow-[0_0_12px_rgba(168,85,247,0.45)]'
+              : 'bg-[#050716]/75 border-cyan-500/25 text-slate-300 hover:text-cyan-300 hover:border-cyan-400/70'
           }`}
         >
-          <Star className={`w-4 h-4 ${isFavorite ? 'fill-amber-400' : ''}`} />
+          <Star className={`w-4 h-4 ${isFavorite ? 'fill-amber-300' : ''}`} />
         </button>
       </div>
 
       {/* Card Content */}
       <div className="p-4 flex flex-col flex-1">
-        {/* Anti-Slop Zero-Pill Metadata */}
-        <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5">
-          <span>{game.category}</span>
-          <span aria-hidden="true" className="text-slate-600">·</span>
-          <span className="text-amber-400/90 font-medium">★ {game.rating.toFixed(1)}</span>
-          <span aria-hidden="true" className="text-slate-600">·</span>
+        {/* Clean Unboxed Metadata */}
+        <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5 tabular-nums">
+          <span className="text-cyan-300/90 font-medium">{game.category}</span>
+          <span aria-hidden="true" className="text-purple-400/60">·</span>
+          <span className="text-amber-300 font-medium">★ {game.rating.toFixed(1)}</span>
+          <span aria-hidden="true" className="text-purple-400/60">·</span>
           <span>{formattedPlays} plays</span>
         </div>
 
         {/* Title */}
-        <h3 className="text-base font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-1 mb-1">
+        <h3 className="font-display text-base font-bold text-white group-hover:text-cyan-300 transition-colors line-clamp-1 mb-1">
           {game.title}
         </h3>
 
@@ -70,9 +73,9 @@ export const GameCard = ({
         </p>
 
         {/* Controls footer */}
-        <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
-          <span className="truncate max-w-[200px]">{game.controls.split('·')[0]}</span>
-          <span className="text-emerald-400 font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
+        <div className="pt-2.5 border-t border-purple-500/15 flex items-center justify-between text-[11px] text-slate-400">
+          <span className="truncate max-w-[195px]">{game.controls.split('·')[0]}</span>
+          <span className="text-purple-300 group-hover:text-cyan-300 font-bold group-hover:translate-x-1 transition-all flex items-center gap-1">
             Play →
           </span>
         </div>
