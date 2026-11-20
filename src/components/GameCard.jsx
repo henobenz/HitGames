@@ -13,17 +13,15 @@ function resolveThumbnailSrc(game) {
 export const GameCard = ({
   game,
   isFavorite,
+  sessionCount = 0,
   onToggleFavorite,
   onRemoveGame,
   onSelectGame
 }) => {
   const [imgError, setImgError] = useState(false);
 
-  const formattedPlays = game.playedCount >= 1000
-    ? `${(game.playedCount / 1000).toFixed(1)}k`
-    : game.playedCount.toString();
-
   const thumbSrc = resolveThumbnailSrc(game);
+  const inputLabel = /touch|swipe|tap/i.test(game.controls || '') ? 'Touch & Keyboard' : 'Keyboard & Mouse';
 
   return (
     <div
@@ -89,13 +87,17 @@ export const GameCard = ({
 
       {/* Card Content */}
       <div className="p-4 flex flex-col flex-1">
-        {/* Clean Unboxed Metadata */}
+        {/* Clean Unboxed Metadata without fake ratings */}
         <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5 tabular-nums">
           <span className="text-cyan-300/90 font-medium">{game.category}</span>
           <span aria-hidden="true" className="text-purple-400/60">·</span>
-          <span className="text-amber-300 font-medium">★ {game.rating.toFixed(1)}</span>
-          <span aria-hidden="true" className="text-purple-400/60">·</span>
-          <span>{formattedPlays} plays</span>
+          <span>{inputLabel}</span>
+          {sessionCount > 0 && (
+            <>
+              <span aria-hidden="true" className="text-purple-400/60">·</span>
+              <span className="text-purple-300">{sessionCount} {sessionCount === 1 ? 'play' : 'plays'}</span>
+            </>
+          )}
         </div>
 
         {/* Title */}

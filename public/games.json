@@ -7,8 +7,6 @@
     "controls": "Touch Left/Right pedals or Arrow Keys / A & D to accelerate and brake",
     "thumbnail": "./thumbnails/eggy-car.svg",
     "iframe": "<iframe id=\"game\" title=\"Eggy Car\" src=\"https://www.hoodamath.com/mobile/games/eggy-car/game.html?nocheckorient=1\" scrolling=\"no\" allow=\"autoplay; fullscreen; gamepad\" allowfullscreen style=\"width:100%;height:100%;margin:0;border:0;padding:0;\"></iframe>",
-    "rating": 4.92,
-    "playedCount": 64500,
     "featured": true,
     "tags": ["Driving", "Physics", "Balancing", "Popular"],
     "accentColor": "#22d3ee"
@@ -21,8 +19,6 @@
     "controls": "Hold Click, Tap screen, or Space / Up Arrow to rise · Release to dive",
     "thumbnail": "./thumbnails/algebra-run-wave.svg",
     "iframe": "<iframe id=\"game\" title=\"Algebra Run Wave\" src=\"https://www.hoodamath.com/mobile/games/algebra-run-wave/game.html?nocheckorient=1\" scrolling=\"no\" allow=\"autoplay; fullscreen; gamepad\" allowfullscreen style=\"width:100%;height:100%;margin:0;border:0;padding:0;\"></iframe>",
-    "rating": 4.89,
-    "playedCount": 41200,
     "featured": true,
     "tags": ["Wave", "Timing", "Math", "Arcade"],
     "accentColor": "#a855f7"
@@ -35,8 +31,6 @@
     "controls": "Swipe board, tap D-Pad, or use Arrow Keys / W/A/S/D · Space or Pause button",
     "thumbnail": "./thumbnails/snake.svg",
     "iframe": "<iframe src=\"./games/snake/index.html\" title=\"Retro Snake\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
-    "rating": 4.9,
-    "playedCount": 42190,
     "featured": true,
     "tags": ["Classic", "Arcade", "8-Bit", "Survival"],
     "accentColor": "#10b981"
@@ -49,8 +43,6 @@
     "controls": "Swipe to move/drop, tap board to rotate, or use on-screen buttons / Arrow Keys · Space hard drop · C hold",
     "thumbnail": "./thumbnails/tetris.svg",
     "iframe": "<iframe src=\"./games/tetris/index.html\" title=\"Block Drop Classic\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
-    "rating": 4.95,
-    "playedCount": 58430,
     "featured": true,
     "tags": ["Blocks", "Puzzle", "Brain", "Classic"],
     "accentColor": "#a855f7"
@@ -63,8 +55,6 @@
     "controls": "Touch drag (left & right halves in 2P), Mouse, or W/S & Arrow Keys",
     "thumbnail": "./thumbnails/pong.svg",
     "iframe": "<iframe src=\"./games/pong/index.html\" title=\"Retro Pong\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
-    "rating": 4.8,
-    "playedCount": 26800,
     "featured": false,
     "tags": ["Multiplayer", "Arcade", "Sports", "Table Tennis"],
     "accentColor": "#38bdf8"
@@ -77,8 +67,6 @@
     "controls": "Touch drag, Mouse slide, or Left/Right arrows · Tap / Click / Space to launch ball",
     "thumbnail": "./thumbnails/breakout.svg",
     "iframe": "<iframe src=\"./games/breakout/index.html\" title=\"Brick Breaker\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
-    "rating": 4.85,
-    "playedCount": 34100,
     "featured": true,
     "tags": ["Breakout", "Bricks", "Skill", "Destruction"],
     "accentColor": "#f59e0b"
@@ -91,8 +79,6 @@
     "controls": "Tap screen anywhere, Click, or press Space bar to flap",
     "thumbnail": "./thumbnails/flappy.svg",
     "iframe": "<iframe src=\"./games/flappy/index.html\" title=\"Flappy Copter\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
-    "rating": 4.75,
-    "playedCount": 61200,
     "featured": true,
     "tags": ["One-Button", "Endless", "Timing", "Addictive"],
     "accentColor": "#06b6d4"
@@ -105,8 +91,6 @@
     "controls": "Swipe board, tap arrow buttons, or use Arrow Keys / W/A/S/D",
     "thumbnail": "./thumbnails/2048.svg",
     "iframe": "<iframe src=\"./games/2048/index.html\" title=\"2048 Sliding Puzzle\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
-    "rating": 4.9,
-    "playedCount": 47900,
     "featured": true,
     "tags": ["Math", "Strategy", "Grid", "Popular"],
     "accentColor": "#eab308"
@@ -119,8 +103,6 @@
     "controls": "Tap screen / Jump button / Space to jump · Hold Duck button or Down Arrow to duck",
     "thumbnail": "./thumbnails/dino.svg",
     "iframe": "<iframe src=\"./games/dino/index.html\" title=\"Dino Runner\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
-    "rating": 4.88,
-    "playedCount": 73200,
     "featured": true,
     "tags": ["Runner", "Offline", "T-Rex", "Jump"],
     "accentColor": "#10b981"
@@ -133,8 +115,6 @@
     "controls": "Touch drag or ◀/▶ & FIRE buttons · Left/Right arrows or A/D & Space",
     "thumbnail": "./thumbnails/space-invaders.svg",
     "iframe": "<iframe src=\"./games/space-invaders/index.html\" title=\"Space Invaders Defender\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
-    "rating": 4.82,
-    "playedCount": 29400,
     "featured": false,
     "tags": ["Space", "Shooter", "Aliens", "Retro"],
     "accentColor": "#f43f5e"
@@ -147,8 +127,6 @@
     "controls": "On-screen flight buttons (↺ ↻ THRUST WARP FIRE) or Arrow Keys + Space + H",
     "thumbnail": "./thumbnails/asteroids.svg",
     "iframe": "<iframe src=\"./games/asteroids/index.html\" title=\"Vector Asteroids\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
-    "rating": 4.79,
-    "playedCount": 21800,
     "featured": false,
     "tags": ["Physics", "Space", "Vector", "Classic"],
     "accentColor": "#38bdf8"
@@ -158,11 +136,9 @@
     "title": "Minesweeper Classic",
     "category": "Strategy",
     "description": "Uncover grid tiles using deductive logic to flag concealed explosive ordnance without detonating a single mine.",
-    "controls": "Tap Reveal/Flag mode toggle, long-press cell, or Left/Right Click to flag 🚩",
+    "controls": "Tap Reveal/Flag mode toggle, long-press cell, or Left/Right Click to flag",
     "thumbnail": "./thumbnails/minesweeper.svg",
     "iframe": "<iframe src=\"./games/minesweeper/index.html\" title=\"Minesweeper Classic\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
-    "rating": 4.86,
-    "playedCount": 38900,
     "featured": false,
     "tags": ["Logic", "Board", "Flags", "Windows"],
     "accentColor": "#ef4444"
@@ -175,8 +151,6 @@
     "controls": "Tap anywhere, Click, or press Space bar to drop sliding slab",
     "thumbnail": "./thumbnails/stack.svg",
     "iframe": "<iframe src=\"./games/stack/index.html\" title=\"Tower Stack\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
-    "rating": 4.91,
-    "playedCount": 51700,
     "featured": true,
     "tags": ["Stacking", "Tower", "Timing", "3D"],
     "accentColor": "#f59e0b"
@@ -189,8 +163,6 @@
     "controls": "Swipe maze, tap D-Pad, or use Arrow keys / W/A/S/D",
     "thumbnail": "./thumbnails/pacman.svg",
     "iframe": "<iframe src=\"./games/pacman/index.html\" title=\"Maze Muncher\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
-    "rating": 4.93,
-    "playedCount": 68100,
     "featured": true,
     "tags": ["Maze", "Pacman", "Arcade", "Ghosts"],
     "accentColor": "#facc15"
@@ -203,8 +175,6 @@
     "controls": "Tap on-screen keys or use Keyboard · Enter to submit guess",
     "thumbnail": "./thumbnails/wordle.svg",
     "iframe": "<iframe src=\"./games/wordle/index.html\" title=\"Word Guess Challenge\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
-    "rating": 4.87,
-    "playedCount": 44300,
     "featured": false,
     "tags": ["Words", "Vocabulary", "Daily", "Puzzle"],
     "accentColor": "#10b981"
@@ -217,8 +187,6 @@
     "controls": "Tap or Click any column slot to drop piece into lowest available position",
     "thumbnail": "./thumbnails/connect4.svg",
     "iframe": "<iframe src=\"./games/connect4/index.html\" title=\"Four in a Row\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
-    "rating": 4.84,
-    "playedCount": 27600,
     "featured": false,
     "tags": ["Strategy", "Connect", "Board", "Versus"],
     "accentColor": "#3b82f6"

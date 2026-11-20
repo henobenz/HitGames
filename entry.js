@@ -11,26 +11,37 @@
     { id: 'wikipedia', label: 'Wikipedia', title: 'Calculus — Wikipedia', faviconUrl: 'https://en.wikipedia.org/static/favicon/wikipedia.ico' }
   ];
 
-  var CATEGORIES = ['All', 'Featured', 'Favorites', 'Retro', 'Arcade', 'Puzzle', 'Action', 'Casual', 'Strategy'];
+  var CATEGORIES = ['All', 'Featured', 'Favorites', 'Action', 'Puzzle', 'Retro', 'Arcade', 'Casual', 'Strategy'];
 
   var state = {
     games: [],
     gamesBasePrefix: './',
     loading: true,
     selectedGame: null,
+    activeView: 'catalog',
     searchQuery: '',
     selectedCategory: 'All',
-    sortBy: 'popular',
+    sortBy: 'featured',
     favorites: [],
-    isAddModalOpen: false,
-    isJsonModalOpen: false,
-    jsonModalTab: 'view',
+    recentIds: [],
+    playStats: {},
+    leaderboardEntries: [],
+    playerHandle: '',
+    spotlightIndex: 0,
+    isSpotlightPaused: false,
     isPanicOpen: false,
     isCloakOpen: false,
     currentCloak: 'default',
     copiedShare: false,
-    copiedJson: false
+    theaterSeconds: 0,
+    theaterScoreSaved: false,
+    lbFilterGame: 'all',
+    lbConfirmReset: false,
+    lbSubmitted: false
   };
+
+  var playTimerId = null;
+  var spotlightTimerId = null;
 
   function injectStyles() {
     if (document.getElementById('pv-fallback-styles')) return;
@@ -61,13 +72,20 @@
       '.pv-btn-danger{background:rgba(244,63,94,0.12);border-color:rgba(244,63,94,0.45);color:#fda4af}',
       '.pv-btn-danger:hover{background:rgba(244,63,94,0.22);border-color:rgba(251,113,133,0.9);box-shadow:0 0 18px rgba(244,63,94,0.45)}',
       '.pv-main{flex:1;max-width:1280px;width:100%;margin:0 auto;padding:32px 20px}',
-      '.pv-hero{position:relative;border-radius:16px;background:linear-gradient(135deg,#0e1230,#080b1f,#050714);border:1px solid rgba(168,85,247,0.35);padding:28px;margin-bottom:28px;box-shadow:0 20px 45px rgba(0,0,0,0.75),0 0 28px rgba(168,85,247,0.14);display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:stretch}',
-      '.pv-hero-thumb{position:relative;border-radius:12px;overflow:hidden;border:1px solid rgba(34,211,238,0.35);background:#050716;min-height:180px;cursor:pointer;box-shadow:0 0 24px rgba(34,211,238,0.18)}',
+      '.pv-hero{position:relative;border-radius:16px;background:linear-gradient(135deg,#0e1230,#080b1f,#050714);border:1px solid rgba(168,85,247,0.35);padding:28px;margin-bottom:24px;box-shadow:0 20px 45px rgba(0,0,0,0.75),0 0 28px rgba(168,85,247,0.14);display:grid;grid-template-columns:1.35fr 1fr;gap:24px;align-items:stretch}',
+      '.pv-hero-thumb{position:relative;border-radius:12px;overflow:hidden;border:1px solid rgba(34,211,238,0.35);background:#050716;min-height:200px;cursor:pointer;box-shadow:0 0 24px rgba(34,211,238,0.18)}',
       '.pv-hero-thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .24s}',
       '.pv-hero-thumb:hover img{transform:scale(1.05)}',
-      '.pv-hero-kicker{font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:10px;display:flex;align-items:center;gap:8px}',
-      '.pv-hero h1{font-family:"Chakra Petch","Plus Jakarta Sans",sans-serif;margin:0 0 10px;font-size:34px;font-weight:700;color:#fff;letter-spacing:-0.02em}',
+      '.pv-hero-kicker{font-size:12px;font-weight:700;color:#67e8f9;display:flex;align-items:center;gap:8px}',
+      '.pv-hero h1{font-family:"Chakra Petch","Plus Jakarta Sans",sans-serif;margin:10px 0 8px;font-size:32px;font-weight:700;color:#fff;letter-spacing:-0.02em}',
       '.pv-hero p{margin:0 0 18px;font-size:14px;color:#cbd5e1;line-height:1.6;max-width:640px}',
+      '.pv-dots{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:12px}',
+      '.pv-dot{height:6px;width:8px;border-radius:999px;background:#334155;transition:all .2s}',
+      '.pv-dot.active{width:26px;background:linear-gradient(90deg,#22d3ee,#a855f7);box-shadow:0 0 8px rgba(34,211,238,0.7)}',
+      '.pv-recent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:24px}',
+      '.pv-recent-card{display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:rgba(8,11,31,0.9);border:1px solid rgba(168,85,247,0.25);text-align:left;transition:border-color .18s,background .18s}',
+      '.pv-recent-card:hover{border-color:rgba(34,211,238,0.65);background:rgba(14,19,51,0.95)}',
+      '.pv-recent-card img{width:64px;height:40px;object-fit:cover;border-radius:8px;border:1px solid rgba(168,85,247,0.3);flex-shrink:0}',
       '.pv-controls{display:flex;flex-direction:column;gap:14px;margin-bottom:20px}',
       '.pv-controls-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}',
       '.pv-search{position:relative;flex:1;min-width:240px;max-width:440px}',
@@ -86,38 +104,38 @@
       '.pv-card-thumb{position:relative;aspect-ratio:16/10;background:#050716;border-bottom:1px solid rgba(168,85,247,0.2);display:flex;align-items:center;justify-content:center;overflow:hidden}',
       '.pv-card-thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .24s}',
       '.pv-card:hover .pv-card-thumb img{transform:scale(1.06)}',
-      '.pv-card-badge{font-family:"Chakra Petch",sans-serif;font-size:30px;font-weight:700;letter-spacing:-0.03em;transition:transform .24s}',
-      '.pv-card:hover .pv-card-badge{transform:scale(1.1)}',
       '.pv-fav-btn{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:8px;border:1px solid rgba(34,211,238,0.28);background:rgba(5,7,22,0.8);color:#cbd5e1;display:flex;align-items:center;justify-content:center;font-size:14px}',
       '.pv-fav-btn.active{background:rgba(168,85,247,0.25);border-color:rgba(168,85,247,0.65);color:#fcd34d;box-shadow:0 0 12px rgba(168,85,247,0.4)}',
       '.pv-card-body{padding:16px;display:flex;flex-direction:column;flex:1}',
-      '.pv-card-meta{font-size:12px;color:#94a3b8;margin-bottom:6px;display:flex;gap:6px;align-items:center}',
+      '.pv-card-meta{font-size:12px;color:#94a3b8;margin-bottom:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}',
       '.pv-card-title{font-family:"Chakra Petch","Plus Jakarta Sans",sans-serif;margin:0 0 6px;font-size:16px;font-weight:700;color:#fff;transition:color .2s}',
       '.pv-card:hover .pv-card-title{color:#67e8f9}',
       '.pv-card-desc{margin:0 0 12px;font-size:12px;color:#94a3b8;line-height:1.5;flex:1}',
       '.pv-card-foot{padding-top:10px;border-top:1px solid rgba(168,85,247,0.16);display:flex;justify-content:space-between;font-size:11px;color:#94a3b8}',
       '.pv-theater{display:flex;flex-direction:column;gap:20px}',
       '.pv-player-box{background:#04050f;border:1px solid rgba(168,85,247,0.35);border-radius:16px;overflow:hidden;box-shadow:0 24px 48px rgba(0,0,0,0.7),0 0 28px rgba(34,211,238,0.14)}',
-      '.pv-player-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#090c22;border-bottom:1px solid rgba(168,85,247,0.25)}',
+      '.pv-player-bar{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;padding:10px 16px;background:#090c22;border-bottom:1px solid rgba(168,85,247,0.25)}',
       '.pv-player-frame{position:relative;width:100%;height:min(78vh,580px);background:#04050f;overflow:hidden}',
       '.pv-player-frame iframe{width:100%;height:100%;border:none}',
       '.pv-curtain{position:absolute;inset:0;z-index:10;background:#04050f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;transition:opacity .3s}',
       '.pv-curtain img{width:160px;aspect-ratio:16/10;object-fit:cover;border-radius:12px;border:1px solid rgba(34,211,238,0.4);box-shadow:0 0 24px rgba(34,211,238,0.28)}',
       '.pv-details-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}',
-      '@media(max-width:900px){.pv-details-grid,.pv-hero{grid-template-columns:1fr}.pv-nav{display:none}}',
+      '.pv-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}',
+      '.pv-lb-grid{display:grid;grid-template-columns:1.8fr 1fr;gap:20px}',
+      '@media(max-width:900px){.pv-details-grid,.pv-hero,.pv-lb-grid{grid-template-columns:1fr}.pv-stats-grid{grid-template-columns:repeat(2,1fr)}.pv-nav{display:none}}',
       '.pv-panel{background:rgba(8,11,31,0.9);border:1px solid rgba(168,85,247,0.25);border-radius:16px;padding:20px}',
-      '.pv-modal-backdrop{position:fixed;inset:0;z-index:50;background:rgba(2,3,10,0.85);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px}',
-      '.pv-modal{width:100%;max-width:680px;max-height:90vh;overflow:auto;background:#080b1f;border:1px solid rgba(168,85,247,0.4);border-radius:16px;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,0.9),0 0 32px rgba(168,85,247,0.2)}',
       '.pv-field{width:100%;padding:9px 12px;background:#04050f;border:1px solid rgba(168,85,247,0.35);border-radius:10px;color:#fff;font-size:13px;outline:none}',
       '.pv-field:focus{border-color:#22d3ee}',
+      '.pv-table{width:100%;border-collapse:collapse;font-size:13px}',
+      '.pv-table th{text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;color:#94a3b8;border-bottom:1px solid rgba(168,85,247,0.2)}',
+      '.pv-table td{padding:10px 12px;border-bottom:1px solid rgba(168,85,247,0.12)}',
       '.pv-dropdown{position:relative}',
       '.pv-dropdown-menu{position:absolute;right:0;top:100%;margin-top:8px;width:220px;background:#0a0e26;border:1px solid rgba(168,85,247,0.4);border-radius:12px;padding:6px 0;z-index:60;box-shadow:0 16px 32px rgba(0,0,0,0.75)}',
       '.pv-dropdown-item{width:100%;text-align:left;padding:8px 12px;font-size:12px;color:#cbd5e1;display:flex;justify-content:space-between;align-items:center}',
       '.pv-dropdown-item:hover{background:rgba(168,85,247,0.18)}',
       '.pv-footer{margin-top:auto;border-top:1px solid rgba(168,85,247,0.2);background:rgba(4,5,15,0.95);padding:24px 20px;font-size:12px;color:#94a3b8}',
       '.pv-footer-inner{max-width:1280px;margin:0 auto;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}',
-      '.pv-panic{position:fixed;inset:0;z-index:100;background:#f8f9fa;color:#1e293b;display:flex;flex-direction:column;overflow:auto}',
-      'pre.pv-json{background:#04050f;border:1px solid rgba(168,85,247,0.25);border-radius:12px;padding:14px;overflow:auto;max-height:420px;font-size:12px;color:#67e8f9;font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}'
+      '.pv-panic{position:fixed;inset:0;z-index:100;background:#f8f9fa;color:#1e293b;display:flex;flex-direction:column;overflow:auto}'
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -128,6 +146,21 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  function formatDuration(totalSeconds) {
+    var s = Math.max(0, Math.floor(totalSeconds || 0));
+    if (s < 60) return s + 's';
+    var mins = Math.floor(s / 60);
+    var hrs = Math.floor(mins / 60);
+    if (hrs > 0) return hrs + 'h ' + (mins % 60) + 'm';
+    return mins + 'm ' + (s % 60) + 's';
+  }
+
+  function formatClock(totalSeconds) {
+    var m = Math.floor((totalSeconds || 0) / 60);
+    var s = (totalSeconds || 0) % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
   }
 
   function extractIframeSrc(iframeHtmlOrUrl) {
@@ -172,6 +205,83 @@
     link.href = option.faviconUrl;
   }
 
+  function selectGame(game) {
+    if (!game) return;
+    state.selectedGame = game;
+    state.activeView = 'catalog';
+    state.theaterSeconds = 0;
+    state.theaterScoreSaved = false;
+
+    state.recentIds = [game.id].concat(state.recentIds.filter(function (id) { return id !== game.id; })).slice(0, 6);
+    localStorage.setItem('playvault_recent', JSON.stringify(state.recentIds));
+
+    var curr = state.playStats[game.id] || { sessions: 0, totalSeconds: 0, lastPlayed: 0 };
+    state.playStats[game.id] = {
+      sessions: (curr.sessions || 0) + 1,
+      totalSeconds: curr.totalSeconds || 0,
+      lastPlayed: Date.now()
+    };
+    localStorage.setItem('playvault_stats', JSON.stringify(state.playStats));
+
+    startPlayTimer();
+    render();
+  }
+
+  function stopPlayTimer() {
+    if (playTimerId) {
+      clearInterval(playTimerId);
+      playTimerId = null;
+    }
+  }
+
+  function startPlayTimer() {
+    stopPlayTimer();
+    if (!state.selectedGame) return;
+    playTimerId = setInterval(function () {
+      if (!state.selectedGame || state.isPanicOpen) return;
+      state.theaterSeconds += 1;
+      var id = state.selectedGame.id;
+      var curr = state.playStats[id] || { sessions: 1, totalSeconds: 0, lastPlayed: Date.now() };
+      curr.totalSeconds = (curr.totalSeconds || 0) + 1;
+      curr.lastPlayed = Date.now();
+      state.playStats[id] = curr;
+      if (state.theaterSeconds % 5 === 0) {
+        localStorage.setItem('playvault_stats', JSON.stringify(state.playStats));
+      }
+      var el = document.getElementById('pv-live-timer');
+      if (el) el.textContent = formatClock(state.theaterSeconds);
+    }, 1000);
+  }
+
+  function saveScore(gameId, player, scoreVal, note) {
+    var numeric = Number(scoreVal);
+    if (!gameId || isNaN(numeric) || numeric < 0) return false;
+    var cleanPlayer = String(player || 'Player 1').trim().slice(0, 18) || 'Player 1';
+    state.playerHandle = cleanPlayer;
+    localStorage.setItem('playvault_player_name', cleanPlayer);
+
+    var entry = {
+      id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      gameId: gameId,
+      player: cleanPlayer,
+      score: numeric,
+      note: String(note || '').trim().slice(0, 28),
+      createdAt: Date.now()
+    };
+    state.leaderboardEntries = [entry].concat(state.leaderboardEntries).slice(0, 100);
+    localStorage.setItem('playvault_leaderboard', JSON.stringify(state.leaderboardEntries));
+    return true;
+  }
+
+  function launchRandomGame() {
+    if (!state.games.length) return;
+    var pool = state.games.length > 1 && state.selectedGame
+      ? state.games.filter(function (g) { return g.id !== state.selectedGame.id; })
+      : state.games;
+    var picked = pool[Math.floor(Math.random() * pool.length)];
+    selectGame(picked);
+  }
+
   function getFilteredGames() {
     var q = state.searchQuery.toLowerCase().trim();
     return state.games
@@ -189,11 +299,126 @@
         return true;
       })
       .sort(function (a, b) {
-        if (state.sortBy === 'popular') return (b.playedCount || 0) - (a.playedCount || 0);
-        if (state.sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
+        if (state.sortBy === 'featured') return Number(Boolean(b.featured)) - Number(Boolean(a.featured));
+        if (state.sortBy === 'sessions') {
+          var sa = (state.playStats[a.id] && state.playStats[a.id].sessions) || 0;
+          var sb = (state.playStats[b.id] && state.playStats[b.id].sessions) || 0;
+          if (sb !== sa) return sb - sa;
+          return (a.title || '').localeCompare(b.title || '');
+        }
         if (state.sortBy === 'alphabetical') return (a.title || '').localeCompare(b.title || '');
+        if (state.sortBy === 'category') return (a.category || '').localeCompare(b.category || '') || (a.title || '').localeCompare(b.title || '');
         return 0;
       });
+  }
+
+  function renderLeaderboardHtml() {
+    var gamesMap = {};
+    state.games.forEach(function (g) { gamesMap[g.id] = g; });
+
+    var totalSessions = 0;
+    var totalSeconds = 0;
+    Object.keys(state.playStats).forEach(function (k) {
+      totalSessions += state.playStats[k].sessions || 0;
+      totalSeconds += state.playStats[k].totalSeconds || 0;
+    });
+
+    var mostPlayed = state.games
+      .map(function (g) {
+        var st = state.playStats[g.id] || {};
+        return { game: g, sessions: st.sessions || 0, totalSeconds: st.totalSeconds || 0 };
+      })
+      .filter(function (x) { return x.sessions > 0; })
+      .sort(function (a, b) { return b.sessions - a.sessions || b.totalSeconds - a.totalSeconds; });
+
+    var filteredScores = state.leaderboardEntries
+      .filter(function (e) { return state.lbFilterGame === 'all' || e.gameId === state.lbFilterGame; })
+      .sort(function (a, b) { return b.score - a.score || b.createdAt - a.createdAt; });
+
+    var topTitle = mostPlayed.length > 0 ? mostPlayed[0].game.title : 'No plays yet';
+
+    var out = '<div style="display:flex;flex-direction:column;gap:20px">';
+    out += '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px">';
+    out += '<div><div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">Arcade Standings &amp; Activity</div>';
+    out += '<h1 style="font-family:&quot;Chakra Petch&quot;,sans-serif;margin:0;font-size:30px;color:#fff">PlayVault Leaderboard</h1>';
+    out += '<p style="margin:4px 0 0;font-size:13px;color:#94a3b8">Real session counts, play duration, and your recorded high scores saved locally on this device.</p></div>';
+    if (!state.lbConfirmReset) {
+      out += '<button id="pv-lb-reset-ask" class="pv-btn pv-btn-danger">Reset Records</button>';
+    } else {
+      out += '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px;background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.4)">';
+      out += '<span style="font-size:12px;color:#fecdd3">Clear all stats &amp; scores?</span>';
+      out += '<button id="pv-lb-reset-yes" class="pv-btn pv-btn-danger" style="padding:4px 10px">Confirm</button>';
+      out += '<button id="pv-lb-reset-no" class="pv-btn" style="padding:4px 10px">Cancel</button></div>';
+    }
+    out += '</div>';
+
+    out += '<div class="pv-stats-grid">';
+    out += '<div class="pv-panel"><div style="font-size:12px;color:#94a3b8;margin-bottom:4px">Total Sessions</div><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:24px;font-weight:700;color:#67e8f9">' + totalSessions + '</div></div>';
+    out += '<div class="pv-panel"><div style="font-size:12px;color:#94a3b8;margin-bottom:4px">Active Play Time</div><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:24px;font-weight:700;color:#c084fc">' + escapeHtml(formatDuration(totalSeconds)) + '</div></div>';
+    out += '<div class="pv-panel"><div style="font-size:12px;color:#94a3b8;margin-bottom:4px">Recorded High Scores</div><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:24px;font-weight:700;color:#fcd34d">' + state.leaderboardEntries.length + '</div></div>';
+    out += '<div class="pv-panel"><div style="font-size:12px;color:#94a3b8;margin-bottom:4px">Most Played Game</div><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:18px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(topTitle) + '</div></div>';
+    out += '</div>';
+
+    out += '<div class="pv-lb-grid">';
+    out += '<div style="display:flex;flex-direction:column;gap:20px">';
+
+    // Log Score Form
+    out += '<form id="pv-lb-form" class="pv-panel">';
+    out += '<div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:16px;font-weight:700;color:#fff;margin-bottom:12px">Log a High Score</div>';
+    out += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">';
+    out += '<select id="pv-lb-game" class="pv-field">';
+    state.games.forEach(function (g) {
+      out += '<option value="' + escapeHtml(g.id) + '">' + escapeHtml(g.title) + '</option>';
+    });
+    out += '</select>';
+    out += '<input id="pv-lb-player" class="pv-field" type="text" maxlength="18" placeholder="Player name" value="' + escapeHtml(state.playerHandle) + '">';
+    out += '<input id="pv-lb-score" class="pv-field" type="number" min="0" required placeholder="Score (e.g. 2450)">';
+    out += '<input id="pv-lb-note" class="pv-field" type="text" maxlength="28" placeholder="Note (optional)">';
+    out += '</div>';
+    out += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">';
+    out += '<span style="font-size:11px;color:#94a3b8">' + (state.lbSubmitted ? '<span style="color:#6ee7b7">Score recorded to leaderboard!</span>' : 'Only real scores you submit appear here.') + '</span>';
+    out += '<button type="submit" class="pv-btn pv-btn-primary">Submit Score</button></div></form>';
+
+    // High Score Table
+    out += '<div class="pv-panel" style="padding:0;overflow:hidden">';
+    out += '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid rgba(168,85,247,0.2)">';
+    out += '<span style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:16px;font-weight:700;color:#fff">High Score Standings</span>';
+    out += '<select id="pv-lb-filter" class="pv-field" style="width:auto;padding:6px 10px;font-size:12px"><option value="all">All Games</option>';
+    state.games.forEach(function (g) {
+      out += '<option value="' + escapeHtml(g.id) + '"' + (state.lbFilterGame === g.id ? ' selected' : '') + '>' + escapeHtml(g.title) + '</option>';
+    });
+    out += '</select></div>';
+
+    if (filteredScores.length === 0) {
+      out += '<div style="padding:36px 20px;text-align:center;color:#94a3b8;font-size:13px">No high scores recorded yet. Play any game and submit your score!</div>';
+    } else {
+      out += '<div style="overflow-x:auto"><table class="pv-table"><thead><tr><th>Rank</th><th>Player</th><th>Game</th><th style="text-align:right">Score</th><th style="text-align:right">Action</th></tr></thead><tbody>';
+      filteredScores.forEach(function (entry, idx) {
+        var gm = gamesMap[entry.gameId];
+        out += '<tr><td style="font-family:monospace;color:' + (idx === 0 ? '#fcd34d' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#fdba74' : '#94a3b8') + '">#' + (idx + 1) + '</td>';
+        out += '<td><strong style="color:#fff">' + escapeHtml(entry.player) + '</strong>' + (entry.note ? ' <span style="font-size:11px;color:#94a3b8">· ' + escapeHtml(entry.note) + '</span>' : '') + '</td>';
+        out += '<td><button data-select-game="' + escapeHtml(entry.gameId) + '" style="color:#67e8f9">' + escapeHtml(gm ? gm.title : entry.gameId) + '</button></td>';
+        out += '<td style="text-align:right;font-family:&quot;Chakra Petch&quot;,sans-serif;font-weight:700;color:#67e8f9">' + Number(entry.score).toLocaleString() + '</td>';
+        out += '<td style="text-align:right"><button data-del-score="' + escapeHtml(entry.id) + '" style="color:#94a3b8;font-size:12px" title="Remove">✕</button></td></tr>';
+      });
+      out += '</tbody></table></div>';
+    }
+    out += '</div></div>';
+
+    // Most Played Sidebar
+    out += '<div class="pv-panel"><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:16px;font-weight:700;color:#fff;margin-bottom:14px">Your Most Played</div>';
+    if (mostPlayed.length === 0) {
+      out += '<p style="font-size:13px;color:#94a3b8">Launch any game from the catalog to start tracking your session counts and play time.</p>';
+    } else {
+      mostPlayed.slice(0, 10).forEach(function (item, idx) {
+        out += '<div data-select-game="' + escapeHtml(item.game.id) + '" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid rgba(168,85,247,0.2);border-radius:10px;margin-bottom:8px;cursor:pointer;background:#050716">';
+        out += '<div style="min-width:0"><div style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="color:#67e8f9;font-family:monospace;margin-right:6px">#' + (idx + 1) + '</span>' + escapeHtml(item.game.title) + '</div>';
+        out += '<div style="font-size:11px;color:#94a3b8">' + escapeHtml(item.game.category) + ' · ' + escapeHtml(formatDuration(item.totalSeconds)) + '</div></div>';
+        out += '<div style="font-size:12px;font-weight:700;color:#c084fc;white-space:nowrap">' + item.sessions + (item.sessions === 1 ? ' play' : ' plays') + '</div></div>';
+      });
+    }
+    out += '</div></div></div>';
+    return out;
   }
 
   function render() {
@@ -222,16 +447,22 @@
     }
 
     var filtered = getFilteredGames();
-    var spotlight = state.games.find(function (g) { return g.id === 'snake'; }) || state.games[0];
+    var spotlight = state.games.length > 0 ? state.games[state.spotlightIndex % state.games.length] : null;
+    var bestByGame = {};
+    state.leaderboardEntries.forEach(function (e) {
+      if (bestByGame[e.gameId] === undefined || e.score > bestByGame[e.gameId]) bestByGame[e.gameId] = e.score;
+    });
 
     var html = '<div class="pv-app">';
     html += '<header class="pv-header"><div class="pv-header-inner">';
     html += '<div class="pv-brand" id="pv-home"><div class="pv-brand-icon">PV</div><span class="pv-brand-text">PlayVault</span></div>';
     html += '<nav class="pv-nav">';
-    ['All', 'Retro', 'Puzzle', 'Action', 'Favorites'].forEach(function (cat) {
+    ['All', 'Action', 'Puzzle', 'Retro', 'Favorites'].forEach(function (cat) {
       var label = cat === 'All' ? 'All Games' : cat;
-      html += '<button data-nav-cat="' + cat + '" class="' + (state.selectedCategory === cat ? 'active' : '') + '">' + label + '</button>';
+      var active = state.activeView === 'catalog' && state.selectedCategory === cat && !state.selectedGame;
+      html += '<button data-nav-cat="' + cat + '" class="' + (active ? 'active' : '') + '">' + label + '</button>';
     });
+    html += '<button id="pv-nav-leaderboard" class="' + (state.activeView === 'leaderboard' && !state.selectedGame ? 'active' : '') + '">Leaderboard</button>';
     html += '</nav>';
     html += '<div class="pv-actions">';
     html += '<div class="pv-dropdown"><button id="pv-cloak-toggle" class="pv-btn">Cloak Tab</button>';
@@ -244,8 +475,6 @@
     }
     html += '</div>';
     html += '<button id="pv-panic-btn" class="pv-btn pv-btn-danger">Panic (Esc)</button>';
-    html += '<button id="pv-json-btn" class="pv-btn">games.json</button>';
-    html += '<button id="pv-add-btn" class="pv-btn pv-btn-primary">+ Add Game</button>';
     html += '</div></div></header>';
 
     html += '<main class="pv-main">';
@@ -255,6 +484,9 @@
       var iframeSrc = extractIframeSrc(g.iframe);
       var isExternal = /^https?:\/\//i.test(iframeSrc);
       var isFav = state.favorites.indexOf(g.id) !== -1;
+      var gStats = state.playStats[g.id] || {};
+      var gBest = bestByGame[g.id];
+
       html += '<div class="pv-theater">';
       html += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#94a3b8">';
       html += '<button id="pv-back-btn" style="color:#67e8f9;font-weight:600">← Back to All Games</button>';
@@ -262,8 +494,9 @@
 
       html += '<div id="pv-player-box" class="pv-player-box">';
       html += '<div class="pv-player-bar">';
-      html += '<div style="font-weight:700;color:#fff;font-size:14px">' + escapeHtml(g.title) + ' <span style="color:#67e8f9;font-weight:400">· ' + escapeHtml(g.category) + '</span></div>';
-      html += '<div style="display:flex;gap:8px;align-items:center">';
+      html += '<div style="display:flex;align-items:center;gap:10px"><span style="font-weight:700;color:#fff;font-size:14px">' + escapeHtml(g.title) + ' <span style="color:#67e8f9;font-weight:400">· ' + escapeHtml(g.category) + '</span></span>';
+      html += '<span id="pv-live-timer" style="font-family:monospace;font-size:11px;color:#67e8f9;padding:2px 8px;border-radius:6px;border:1px solid rgba(34,211,238,0.3);background:#050716">' + formatClock(state.theaterSeconds) + '</span></div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">';
       html += '<button id="pv-reload-btn" class="pv-btn">Restart</button>';
       html += '<button id="pv-theater-fav" class="pv-btn">' + (isFav ? '★ Favorited' : '☆ Favorite') + '</button>';
       if (!isExternal) {
@@ -279,30 +512,74 @@
       html += '</div></div>';
 
       html += '<div class="pv-details-grid">';
-      html += '<div class="pv-panel"><h2 style="margin:0 0 8px;color:#fff;font-size:20px">' + escapeHtml(g.title) + '</h2>';
+      html += '<div style="display:flex;flex-direction:column;gap:20px">';
+      html += '<div class="pv-panel"><div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">';
+      html += '<h2 style="margin:0;color:#fff;font-size:20px">' + escapeHtml(g.title) + '</h2>';
+      html += '<div style="font-size:12px;color:#cbd5e1">' + escapeHtml(g.category) + (gStats.sessions ? ' · ' + gStats.sessions + ' sessions' : '') + (gBest !== undefined ? ' · <span style="color:#fcd34d">Best ' + Number(gBest).toLocaleString() + '</span>' : '') + '</div></div>';
       html += '<p style="color:#cbd5e1;font-size:14px;line-height:1.6">' + escapeHtml(g.description) + '</p>';
-      html += '<div style="background:#04050f;border:1px solid rgba(34,211,238,0.25);border-radius:10px;padding:12px;margin-top:14px"><div style="font-size:11px;font-weight:700;color:#67e8f9;text-transform:uppercase;margin-bottom:4px">Controls (Keyboard, Mouse &amp; Touch)</div><div style="font-size:12px;color:#e2e8f0;font-family:monospace">' + escapeHtml(g.controls) + '</div></div>';
+      html += '<div style="background:#04050f;border:1px solid rgba(34,211,238,0.25);border-radius:10px;padding:12px;margin-top:14px"><div style="font-size:11px;font-weight:700;color:#67e8f9;text-transform:uppercase;margin-bottom:4px">Controls (Keyboard, Mouse &amp; Touch)</div><div style="font-size:12px;color:#e2e8f0;font-family:monospace">' + escapeHtml(g.controls) + '</div></div></div>';
+
+      // Quick Record Score in Theater
+      html += '<form id="pv-theater-score-form" class="pv-panel">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><strong style="font-size:14px;color:#fff">Record Score to Leaderboard</strong>';
+      html += '<button type="button" id="pv-theater-open-lb" style="font-size:12px;color:#67e8f9">View Standings →</button></div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:10px">';
+      html += '<input id="pv-th-player" class="pv-field" style="flex:1;min-width:130px" type="text" maxlength="18" placeholder="Player name" value="' + escapeHtml(state.playerHandle) + '">';
+      html += '<input id="pv-th-score" class="pv-field" style="flex:1;min-width:130px" type="number" min="0" required placeholder="Your score">';
+      html += '<button type="submit" class="pv-btn pv-btn-primary">' + (state.theaterScoreSaved ? 'Saved!' : 'Save Score') + '</button></div></form>';
       html += '</div>';
 
       html += '<div class="pv-panel"><div style="font-size:12px;font-weight:700;color:#67e8f9;text-transform:uppercase;margin-bottom:10px">More to Play</div>';
       state.games.filter(function (x) { return x.id !== g.id; }).slice(0, 4).forEach(function (rel) {
-        html += '<div data-select-game="' + escapeHtml(rel.id) + '" style="padding:10px;border:1px solid rgba(168,85,247,0.22);border-radius:10px;margin-bottom:8px;cursor:pointer;background:#050716"><div style="font-size:13px;font-weight:700;color:#fff">' + escapeHtml(rel.title) + '</div><div style="font-size:11px;color:#94a3b8">' + escapeHtml(rel.category) + ' · ★ ' + Number(rel.rating || 5).toFixed(1) + '</div></div>';
+        var relSessions = (state.playStats[rel.id] && state.playStats[rel.id].sessions) || 0;
+        html += '<div data-select-game="' + escapeHtml(rel.id) + '" style="padding:10px;border:1px solid rgba(168,85,247,0.22);border-radius:10px;margin-bottom:8px;cursor:pointer;background:#050716"><div style="font-size:13px;font-weight:700;color:#fff">' + escapeHtml(rel.title) + '</div><div style="font-size:11px;color:#94a3b8">' + escapeHtml(rel.category) + (relSessions > 0 ? ' · ' + relSessions + ' plays' : '') + '</div></div>';
       });
       html += '</div></div></div>';
+    } else if (state.activeView === 'leaderboard') {
+      html += renderLeaderboardHtml();
     } else {
       if (state.selectedCategory === 'All' && !state.searchQuery && spotlight) {
-        var heroThumbUrl = resolveAssetUrl('./og-thumbnail.jpg');
-        html += '<div class="pv-hero"><div><div class="pv-hero-kicker">Featured Neon Arcade Spotlight · ' + escapeHtml(spotlight.category) + '</div>';
+        var spThumb = resolveAssetUrl(spotlight.thumbnail, './thumbnails/' + spotlight.id + '.svg');
+        var spSessions = (state.playStats[spotlight.id] && state.playStats[spotlight.id].sessions) || 0;
+        html += '<div id="pv-hero-box" class="pv-hero"><div>';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">';
+        html += '<div class="pv-hero-kicker">Featured Spotlight · ' + escapeHtml(spotlight.category) + ' · ' + ((state.spotlightIndex % state.games.length) + 1) + '/' + state.games.length + '</div>';
+        html += '<div style="display:flex;gap:6px"><button id="pv-sp-prev" class="pv-btn" style="padding:4px 8px">◀</button><button id="pv-sp-next" class="pv-btn" style="padding:4px 8px">▶</button></div></div>';
         html += '<h1>' + escapeHtml(spotlight.title) + '</h1>';
         html += '<p>' + escapeHtml(spotlight.description) + '</p>';
-        html += '<div style="display:flex;align-items:center;gap:16px"><button id="pv-spotlight-play" class="pv-btn pv-btn-primary" style="padding:10px 18px;font-size:14px">Play Instantly →</button>';
-        html += '<span style="font-size:12px;color:#cbd5e1">★ ' + Number(spotlight.rating || 5).toFixed(1) + ' · ' + Number(spotlight.playedCount || 0).toLocaleString() + ' plays</span></div></div>';
-        html += '<div class="pv-hero-thumb" id="pv-spotlight-thumb"><img src="' + escapeHtml(heroThumbUrl) + '" alt="PlayVault Neon Arcade Thumbnail" referrerpolicy="no-referrer"></div></div>';
+        html += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px"><button id="pv-spotlight-play" class="pv-btn pv-btn-primary" style="padding:10px 18px;font-size:14px">Play Now →</button>';
+        html += '<button id="pv-spotlight-next" class="pv-btn" style="padding:10px 14px">Next Spotlight</button>';
+        if (spSessions > 0) {
+          html += '<span style="font-size:12px;color:#d8b4fe">Played ' + spSessions + (spSessions === 1 ? ' time' : ' times') + '</span>';
+        }
+        html += '</div><div class="pv-dots">';
+        state.games.forEach(function (gm, idx) {
+          var activeDot = idx === (state.spotlightIndex % state.games.length);
+          html += '<button class="pv-dot ' + (activeDot ? 'active' : '') + '" data-sp-idx="' + idx + '" title="' + escapeHtml(gm.title) + '"></button>';
+        });
+        html += '</div></div>';
+        html += '<div class="pv-hero-thumb" id="pv-spotlight-thumb"><img src="' + escapeHtml(spThumb) + '" alt="' + escapeHtml(spotlight.title) + ' spotlight thumbnail" referrerpolicy="no-referrer"></div></div>';
+      }
+
+      // Continue Playing Strip
+      var gamesMap = {};
+      state.games.forEach(function (gm) { gamesMap[gm.id] = gm; });
+      var recentGames = state.recentIds.map(function (id) { return gamesMap[id]; }).filter(Boolean).slice(0, 4);
+      if (state.selectedCategory === 'All' && !state.searchQuery && recentGames.length > 0) {
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><strong style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:14px;color:#fff">Continue Playing</strong><button id="pv-open-lb-strip" style="font-size:12px;color:#67e8f9">Open Leaderboard →</button></div>';
+        html += '<div class="pv-recent-grid">';
+        recentGames.forEach(function (rg) {
+          var rThumb = resolveAssetUrl(rg.thumbnail, './thumbnails/' + rg.id + '.svg');
+          var rSessions = (state.playStats[rg.id] && state.playStats[rg.id].sessions) || 1;
+          html += '<button class="pv-recent-card" data-open-game="' + escapeHtml(rg.id) + '"><img src="' + escapeHtml(rThumb) + '" alt="' + escapeHtml(rg.title) + '" referrerpolicy="no-referrer"><div style="min-width:0"><div style="font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(rg.title) + '</div><div style="font-size:11px;color:#94a3b8">' + escapeHtml(rg.category) + ' · ' + rSessions + (rSessions === 1 ? ' play' : ' plays') + '</div></div></button>';
+        });
+        html += '</div>';
       }
 
       html += '<div class="pv-controls"><div class="pv-controls-row">';
-      html += '<div class="pv-search"><input id="pv-search-input" type="text" value="' + escapeHtml(state.searchQuery) + '" placeholder="Search games, tags, or categories..."></div>';
-      html += '<div class="pv-sort"><span>Sort:</span><select id="pv-sort-select"><option value="popular"' + (state.sortBy === 'popular' ? ' selected' : '') + '>Most Popular</option><option value="rating"' + (state.sortBy === 'rating' ? ' selected' : '') + '>Highest Rated</option><option value="alphabetical"' + (state.sortBy === 'alphabetical' ? ' selected' : '') + '>Title (A-Z)</option></select></div>';
+      html += '<div class="pv-search"><input id="pv-search-input" type="text" value="' + escapeHtml(state.searchQuery) + '" placeholder="Search games, tags, or categories... (Press /)"></div>';
+      html += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button id="pv-random-btn" class="pv-btn pv-btn-purple">Random Game</button>';
+      html += '<div class="pv-sort"><span>Sort:</span><select id="pv-sort-select"><option value="featured"' + (state.sortBy === 'featured' ? ' selected' : '') + '>Featured First</option><option value="sessions"' + (state.sortBy === 'sessions' ? ' selected' : '') + '>Most Played (Yours)</option><option value="alphabetical"' + (state.sortBy === 'alphabetical' ? ' selected' : '') + '>Title (A-Z)</option><option value="category"' + (state.sortBy === 'category' ? ' selected' : '') + '>Category</option></select></div></div>';
       html += '</div><div class="pv-tabs">';
       CATEGORIES.forEach(function (cat) {
         var extra = (cat === 'Favorites' && state.favorites.length > 0) ? ' (' + state.favorites.length + ')' : '';
@@ -310,18 +587,19 @@
       });
       html += '</div></div>';
 
-      html += '<div class="pv-meta-bar"><span>Showing <strong style="color:#67e8f9">' + filtered.length + '</strong> games</span><span>Press <kbd style="background:#0a0e26;border:1px solid rgba(168,85,247,0.4);border-radius:4px;padding:1px 6px;color:#67e8f9">Esc</kbd> anytime for Panic Cloak</span></div>';
+      html += '<div class="pv-meta-bar"><span>Showing <strong style="color:#67e8f9">' + filtered.length + '</strong> games</span><span>Press <kbd style="background:#0a0e26;border:1px solid rgba(168,85,247,0.4);border-radius:4px;padding:1px 6px;color:#67e8f9">/</kbd> to search · <kbd style="background:#0a0e26;border:1px solid rgba(168,85,247,0.4);border-radius:4px;padding:1px 6px;color:#67e8f9">Esc</kbd> for Panic Cloak</span></div>';
 
       if (state.loading) {
         html += '<div style="padding:40px;text-align:center;color:#94a3b8">Loading games from games.json...</div>';
       } else if (filtered.length === 0) {
-        html += '<div class="pv-panel" style="text-align:center;padding:48px"><h3 style="margin:0 0 8px;color:#fff">No Games Found</h3><p style="color:#94a3b8;font-size:13px">Try another filter or add a custom iframe game.</p></div>';
+        html += '<div class="pv-panel" style="text-align:center;padding:48px"><h3 style="margin:0 0 8px;color:#fff">No Games Found</h3><p style="color:#94a3b8;font-size:13px">Try another filter or search term.</p></div>';
       } else {
         html += '<div class="pv-grid">';
         filtered.forEach(function (game) {
           var fav = state.favorites.indexOf(game.id) !== -1;
-          var plays = game.playedCount >= 1000 ? (game.playedCount / 1000).toFixed(1) + 'k' : String(game.playedCount || 0);
           var thumbUrl = resolveAssetUrl(game.thumbnail, './thumbnails/' + game.id + '.svg');
+          var sessionCount = (state.playStats[game.id] && state.playStats[game.id].sessions) || 0;
+          var hasTouch = /touch|tap|drag|swipe/i.test(game.controls || '');
           html += '<div class="pv-card" data-open-game="' + escapeHtml(game.id) + '">';
           html += '<div class="pv-card-thumb">';
           html += '<img src="' + escapeHtml(thumbUrl) + '" alt="' + escapeHtml(game.title) + ' thumbnail" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'">';
@@ -331,7 +609,7 @@
           html += '<button class="pv-fav-btn ' + (fav ? 'active' : '') + '" data-fav-id="' + escapeHtml(game.id) + '" title="Favorite">' + (fav ? '★' : '☆') + '</button>';
           html += '</div>';
           html += '<div class="pv-card-body">';
-          html += '<div class="pv-card-meta"><span style="color:#67e8f9">' + escapeHtml(game.category) + '</span><span>·</span><span style="color:#fcd34d">★ ' + Number(game.rating || 5).toFixed(1) + '</span><span>·</span><span>' + plays + ' plays</span></div>';
+          html += '<div class="pv-card-meta"><span style="color:#67e8f9">' + escapeHtml(game.category) + '</span><span>·</span><span>' + (hasTouch ? 'Touch &amp; Keyboard' : 'Keyboard &amp; Mouse') + '</span>' + (sessionCount > 0 ? '<span>·</span><span style="color:#d8b4fe">' + sessionCount + (sessionCount === 1 ? ' play' : ' plays') + '</span>' : '') + '</div>';
           html += '<h3 class="pv-card-title">' + escapeHtml(game.title) + '</h3>';
           html += '<p class="pv-card-desc">' + escapeHtml(game.description) + '</p>';
           html += '<div class="pv-card-foot"><span>' + escapeHtml((game.controls || '').split('·')[0]) + '</span><span style="color:#c084fc;font-weight:700">Play →</span></div>';
@@ -342,30 +620,7 @@
     }
 
     html += '</main>';
-    html += '<footer class="pv-footer"><div class="pv-footer-inner"><span><strong style="color:#67e8f9">PlayVault</strong> · Neon Arcade Portal · All games stored as iframes in JSON</span><div style="display:flex;gap:16px"><button id="pv-foot-json">Inspect games.json</button><button id="pv-foot-add">Add Game Iframe</button></div></div></footer>';
-
-    if (state.isAddModalOpen) {
-      html += '<div class="pv-modal-backdrop" id="pv-modal-bg"><div class="pv-modal" onclick="event.stopPropagation()">';
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h2 style="margin:0;color:#fff;font-size:18px">Add Custom Game</h2><button id="pv-close-add" class="pv-btn">✕</button></div>';
-      html += '<form id="pv-add-form" style="display:flex;flex-direction:column;gap:12px">';
-      html += '<input id="pv-add-title" class="pv-field" placeholder="Game Title *" required>';
-      html += '<select id="pv-add-cat" class="pv-field"><option>Arcade</option><option>Retro</option><option>Puzzle</option><option>Action</option><option>Casual</option><option>Strategy</option></select>';
-      html += '<input id="pv-add-controls" class="pv-field" placeholder="Controls hint">';
-      html += '<input id="pv-add-thumb" class="pv-field" placeholder="Thumbnail Image URL (optional)">';
-      html += '<textarea id="pv-add-iframe" class="pv-field" rows="3" placeholder="<iframe src=&quot;https://example.com/game.html&quot;></iframe>" required></textarea>';
-      html += '<textarea id="pv-add-desc" class="pv-field" rows="2" placeholder="Description"></textarea>';
-      html += '<div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="pv-cancel-add" class="pv-btn">Cancel</button><button type="submit" class="pv-btn pv-btn-primary">Save Game to JSON</button></div>';
-      html += '</form></div></div>';
-    }
-
-    if (state.isJsonModalOpen) {
-      var jsonStr = JSON.stringify(state.games, null, 2);
-      html += '<div class="pv-modal-backdrop" id="pv-modal-bg"><div class="pv-modal" onclick="event.stopPropagation()">';
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h2 style="margin:0;color:#fff;font-size:18px">games.json (' + state.games.length + ' games)</h2><button id="pv-close-json" class="pv-btn">✕</button></div>';
-      html += '<div style="display:flex;gap:8px;margin-bottom:12px"><button id="pv-copy-json" class="pv-btn">' + (state.copiedJson ? 'Copied!' : 'Copy JSON') + '</button><button id="pv-download-json" class="pv-btn pv-btn-purple">Download games.json</button></div>';
-      html += '<pre class="pv-json">' + escapeHtml(jsonStr) + '</pre>';
-      html += '</div></div>';
-    }
+    html += '<footer class="pv-footer"><div class="pv-footer-inner"><span><strong style="color:#67e8f9">PlayVault</strong> · Neon Arcade Portal · Instant browser arcade games</span><div style="display:flex;gap:16px"><button id="pv-foot-lb">Leaderboard</button><button id="pv-foot-random">Random Game</button><button id="pv-foot-panic">Panic Mode</button></div></div></footer>';
 
     html += '</div>';
     root.innerHTML = html;
@@ -374,11 +629,20 @@
 
   function bindEvents() {
     var home = document.getElementById('pv-home');
-    if (home) home.onclick = function () { state.selectedCategory = 'All'; state.selectedGame = null; render(); };
+    if (home) home.onclick = function () { stopPlayTimer(); state.selectedCategory = 'All'; state.activeView = 'catalog'; state.selectedGame = null; render(); };
+
+    var navLb = document.getElementById('pv-nav-leaderboard');
+    if (navLb) navLb.onclick = function () { stopPlayTimer(); state.selectedGame = null; state.activeView = 'leaderboard'; render(); };
+    var footLb = document.getElementById('pv-foot-lb');
+    if (footLb) footLb.onclick = function () { stopPlayTimer(); state.selectedGame = null; state.activeView = 'leaderboard'; render(); };
+    var stripLb = document.getElementById('pv-open-lb-strip');
+    if (stripLb) stripLb.onclick = function () { stopPlayTimer(); state.selectedGame = null; state.activeView = 'leaderboard'; render(); };
 
     document.querySelectorAll('[data-nav-cat],[data-tab-cat]').forEach(function (el) {
       el.onclick = function () {
+        stopPlayTimer();
         state.selectedCategory = el.getAttribute('data-nav-cat') || el.getAttribute('data-tab-cat');
+        state.activeView = 'catalog';
         state.selectedGame = null;
         render();
       };
@@ -398,16 +662,13 @@
 
     var panicBtn = document.getElementById('pv-panic-btn');
     if (panicBtn) panicBtn.onclick = function () { state.isPanicOpen = true; render(); };
+    var footPanic = document.getElementById('pv-foot-panic');
+    if (footPanic) footPanic.onclick = function () { state.isPanicOpen = true; render(); };
 
-    var addBtn = document.getElementById('pv-add-btn');
-    if (addBtn) addBtn.onclick = function () { state.isAddModalOpen = true; render(); };
-    var footAdd = document.getElementById('pv-foot-add');
-    if (footAdd) footAdd.onclick = function () { state.isAddModalOpen = true; render(); };
-
-    var jsonBtn = document.getElementById('pv-json-btn');
-    if (jsonBtn) jsonBtn.onclick = function () { state.isJsonModalOpen = true; render(); };
-    var footJson = document.getElementById('pv-foot-json');
-    if (footJson) footJson.onclick = function () { state.isJsonModalOpen = true; render(); };
+    var randBtn = document.getElementById('pv-random-btn');
+    if (randBtn) randBtn.onclick = launchRandomGame;
+    var footRand = document.getElementById('pv-foot-random');
+    if (footRand) footRand.onclick = launchRandomGame;
 
     var searchInput = document.getElementById('pv-search-input');
     if (searchInput) {
@@ -423,15 +684,47 @@
     var sortSelect = document.getElementById('pv-sort-select');
     if (sortSelect) sortSelect.onchange = function (e) { state.sortBy = e.target.value; render(); };
 
+    var heroBox = document.getElementById('pv-hero-box');
+    if (heroBox) {
+      heroBox.onmouseenter = function () { state.isSpotlightPaused = true; };
+      heroBox.onmouseleave = function () { state.isSpotlightPaused = false; };
+    }
+
+    var spPrev = document.getElementById('pv-sp-prev');
+    if (spPrev) spPrev.onclick = function () {
+      if (state.games.length) {
+        state.spotlightIndex = (state.spotlightIndex - 1 + state.games.length) % state.games.length;
+        render();
+      }
+    };
+    var spNext = document.getElementById('pv-sp-next');
+    if (spNext) spNext.onclick = function () {
+      if (state.games.length) {
+        state.spotlightIndex = (state.spotlightIndex + 1) % state.games.length;
+        render();
+      }
+    };
+    var spNextBtn = document.getElementById('pv-spotlight-next');
+    if (spNextBtn) spNextBtn.onclick = function () {
+      if (state.games.length) {
+        state.spotlightIndex = (state.spotlightIndex + 1) % state.games.length;
+        render();
+      }
+    };
+    document.querySelectorAll('[data-sp-idx]').forEach(function (dot) {
+      dot.onclick = function () {
+        state.spotlightIndex = Number(dot.getAttribute('data-sp-idx')) || 0;
+        render();
+      };
+    });
+
     var spotlightPlay = document.getElementById('pv-spotlight-play');
     if (spotlightPlay) spotlightPlay.onclick = function () {
-      state.selectedGame = state.games.find(function (g) { return g.id === 'snake'; }) || state.games[0];
-      render();
+      if (state.games.length) selectGame(state.games[state.spotlightIndex % state.games.length]);
     };
     var spotlightThumb = document.getElementById('pv-spotlight-thumb');
     if (spotlightThumb) spotlightThumb.onclick = function () {
-      state.selectedGame = state.games.find(function (g) { return g.id === 'snake'; }) || state.games[0];
-      render();
+      if (state.games.length) selectGame(state.games[state.spotlightIndex % state.games.length]);
     };
 
     document.querySelectorAll('[data-remove-id]').forEach(function (btn) {
@@ -439,7 +732,7 @@
         e.stopPropagation();
         var id = btn.getAttribute('data-remove-id');
         state.games = state.games.filter(function (g) { return g.id !== id; });
-        if (state.selectedGame && state.selectedGame.id === id) state.selectedGame = null;
+        if (state.selectedGame && state.selectedGame.id === id) { stopPlayTimer(); state.selectedGame = null; }
         try {
           var stored = JSON.parse(localStorage.getItem('playvault_custom_games') || '[]');
           localStorage.setItem('playvault_custom_games', JSON.stringify(stored.filter(function (g) { return g.id !== id; })));
@@ -464,12 +757,12 @@
       card.onclick = function () {
         var id = card.getAttribute('data-open-game') || card.getAttribute('data-select-game');
         var found = state.games.find(function (g) { return g.id === id; });
-        if (found) { state.selectedGame = found; render(); }
+        if (found) selectGame(found);
       };
     });
 
     var backBtn = document.getElementById('pv-back-btn');
-    if (backBtn) backBtn.onclick = function () { state.selectedGame = null; render(); };
+    if (backBtn) backBtn.onclick = function () { stopPlayTimer(); state.selectedGame = null; render(); };
 
     var gameFrame = document.getElementById('pv-game-iframe');
     var launchCurtain = document.getElementById('pv-launch-curtain');
@@ -522,73 +815,75 @@
       });
     };
 
-    var modalBg = document.getElementById('pv-modal-bg');
-    if (modalBg) modalBg.onclick = function () { state.isAddModalOpen = false; state.isJsonModalOpen = false; render(); };
-    var closeAdd = document.getElementById('pv-close-add');
-    if (closeAdd) closeAdd.onclick = function () { state.isAddModalOpen = false; render(); };
-    var cancelAdd = document.getElementById('pv-cancel-add');
-    if (cancelAdd) cancelAdd.onclick = function () { state.isAddModalOpen = false; render(); };
-    var closeJson = document.getElementById('pv-close-json');
-    if (closeJson) closeJson.onclick = function () { state.isJsonModalOpen = false; render(); };
+    var thOpenLb = document.getElementById('pv-theater-open-lb');
+    if (thOpenLb) thOpenLb.onclick = function () { stopPlayTimer(); state.selectedGame = null; state.activeView = 'leaderboard'; render(); };
 
-    var copyJson = document.getElementById('pv-copy-json');
-    if (copyJson && navigator.clipboard) copyJson.onclick = function () {
-      navigator.clipboard.writeText(JSON.stringify(state.games, null, 2)).then(function () {
-        state.copiedJson = true; render();
-        setTimeout(function () { state.copiedJson = false; render(); }, 1800);
-      });
-    };
-
-    var dlJson = document.getElementById('pv-download-json');
-    if (dlJson) dlJson.onclick = function () {
-      var blob = new Blob([JSON.stringify(state.games, null, 2)], { type: 'application/json' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url; a.download = 'games.json'; a.click();
-      URL.revokeObjectURL(url);
-    };
-
-    var addForm = document.getElementById('pv-add-form');
-    if (addForm) addForm.onsubmit = function (e) {
-      e.preventDefault();
-      var title = document.getElementById('pv-add-title').value.trim();
-      var cat = document.getElementById('pv-add-cat').value;
-      var controls = document.getElementById('pv-add-controls').value.trim();
-      var thumbInput = document.getElementById('pv-add-thumb') ? document.getElementById('pv-add-thumb').value.trim() : '';
-      var iframeVal = document.getElementById('pv-add-iframe').value.trim();
-      var desc = document.getElementById('pv-add-desc').value.trim();
-      if (!title || !iframeVal) return;
-      var formattedIframe = iframeVal.indexOf('<iframe') === 0 ? iframeVal : '<iframe src="' + iframeVal + '" title="' + title + '" allow="fullscreen; autoplay; gamepad" allowfullscreen></iframe>';
-      var newGame = {
-        id: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || ('game-' + Date.now()),
-        title: title,
-        category: cat,
-        description: desc || 'Custom user added web game embed.',
-        controls: controls || 'Click, tap, or use standard keyboard controls',
-        thumbnail: thumbInput || './thumbnails/default.svg',
-        iframe: formattedIframe,
-        rating: 5.0,
-        playedCount: 1,
-        tags: [cat, 'Custom'],
-        accentColor: '#22d3ee',
-        isCustom: true
+    var thForm = document.getElementById('pv-theater-score-form');
+    if (thForm && state.selectedGame) {
+      thForm.onsubmit = function (e) {
+        e.preventDefault();
+        var p = document.getElementById('pv-th-player').value;
+        var s = document.getElementById('pv-th-score').value;
+        if (saveScore(state.selectedGame.id, p, s, '')) {
+          state.theaterScoreSaved = true;
+          render();
+          setTimeout(function () { state.theaterScoreSaved = false; render(); }, 2000);
+        }
       };
-      state.games.unshift(newGame);
-      var stored = [];
-      try { stored = JSON.parse(localStorage.getItem('playvault_custom_games') || '[]'); } catch (err) {}
-      stored.unshift(newGame);
-      localStorage.setItem('playvault_custom_games', JSON.stringify(stored));
-      state.isAddModalOpen = false;
-      state.selectedGame = newGame;
+    }
+
+    var lbForm = document.getElementById('pv-lb-form');
+    if (lbForm) {
+      lbForm.onsubmit = function (e) {
+        e.preventDefault();
+        var gId = document.getElementById('pv-lb-game').value;
+        var p = document.getElementById('pv-lb-player').value;
+        var s = document.getElementById('pv-lb-score').value;
+        var n = document.getElementById('pv-lb-note').value;
+        if (saveScore(gId, p, s, n)) {
+          state.lbSubmitted = true;
+          render();
+          setTimeout(function () { state.lbSubmitted = false; render(); }, 2200);
+        }
+      };
+    }
+
+    var lbFilter = document.getElementById('pv-lb-filter');
+    if (lbFilter) lbFilter.onchange = function (e) { state.lbFilterGame = e.target.value; render(); };
+
+    document.querySelectorAll('[data-del-score]').forEach(function (btn) {
+      btn.onclick = function () {
+        var id = btn.getAttribute('data-del-score');
+        state.leaderboardEntries = state.leaderboardEntries.filter(function (entry) { return entry.id !== id; });
+        localStorage.setItem('playvault_leaderboard', JSON.stringify(state.leaderboardEntries));
+        render();
+      };
+    });
+
+    var askReset = document.getElementById('pv-lb-reset-ask');
+    if (askReset) askReset.onclick = function () { state.lbConfirmReset = true; render(); };
+    var noReset = document.getElementById('pv-lb-reset-no');
+    if (noReset) noReset.onclick = function () { state.lbConfirmReset = false; render(); };
+    var yesReset = document.getElementById('pv-lb-reset-yes');
+    if (yesReset) yesReset.onclick = function () {
+      state.playStats = {};
+      state.recentIds = [];
+      state.leaderboardEntries = [];
+      state.lbConfirmReset = false;
+      localStorage.removeItem('playvault_stats');
+      localStorage.removeItem('playvault_recent');
+      localStorage.removeItem('playvault_leaderboard');
       render();
     };
   }
 
   async function init() {
     injectStyles();
-    try {
-      state.favorites = JSON.parse(localStorage.getItem('playvault_favorites') || '[]');
-    } catch (e) {}
+    try { state.favorites = JSON.parse(localStorage.getItem('playvault_favorites') || '[]'); } catch (e) {}
+    try { state.recentIds = JSON.parse(localStorage.getItem('playvault_recent') || '[]'); } catch (e) {}
+    try { state.playStats = JSON.parse(localStorage.getItem('playvault_stats') || '{}'); } catch (e) {}
+    try { state.leaderboardEntries = JSON.parse(localStorage.getItem('playvault_leaderboard') || '[]'); } catch (e) {}
+    state.playerHandle = localStorage.getItem('playvault_player_name') || '';
 
     var storedCloak = localStorage.getItem('playvault_cloak');
     if (storedCloak) {
@@ -600,8 +895,37 @@
       if (e.key === 'Escape' || e.key === '`') {
         state.isPanicOpen = !state.isPanicOpen;
         render();
+      } else if (
+        e.key === '/' &&
+        !state.isPanicOpen &&
+        !state.selectedGame &&
+        state.activeView === 'catalog' &&
+        document.activeElement &&
+        document.activeElement.tagName !== 'INPUT' &&
+        document.activeElement.tagName !== 'TEXTAREA'
+      ) {
+        var inp = document.getElementById('pv-search-input');
+        if (inp) { e.preventDefault(); inp.focus(); }
       }
     });
+
+    if (!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+      spotlightTimerId = setInterval(function () {
+        if (
+          state.games.length > 1 &&
+          !state.isSpotlightPaused &&
+          !state.selectedGame &&
+          state.activeView === 'catalog' &&
+          !state.isPanicOpen &&
+          state.selectedCategory === 'All' &&
+          !state.searchQuery &&
+          (!document.activeElement || document.activeElement.id !== 'pv-search-input')
+        ) {
+          state.spotlightIndex = (state.spotlightIndex + 1) % state.games.length;
+          render();
+        }
+      }, 6500);
+    }
 
     render();
 
@@ -624,12 +948,15 @@
       } catch (e) {}
       var ids = new Set(list.map(function (g) { return g.id; }));
       state.games = custom.filter(function (g) { return !ids.has(g.id); }).concat(list);
+      if (state.games.length > 0) {
+        state.spotlightIndex = Math.floor(Math.random() * state.games.length);
+      }
 
       var params = new URLSearchParams(window.location.search);
       var gameParam = params.get('game');
       if (gameParam) {
         var matched = state.games.find(function (g) { return g.id === gameParam; });
-        if (matched) state.selectedGame = matched;
+        if (matched) selectGame(matched);
       }
     } catch (err) {
       console.error('Failed to load games.json:', err);

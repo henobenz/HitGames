@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Gamepad2, Plus, Code2, ShieldAlert, Check, EyeOff } from 'lucide-react';
+import { Gamepad2, ShieldAlert, Check, EyeOff, Trophy } from 'lucide-react';
 
 export const CLOAK_OPTIONS = [
   { id: 'default', label: 'Default (PlayVault)', title: 'PlayVault — Neon Arcade Hub', faviconUrl: './favicon.svg' },
@@ -13,8 +13,8 @@ export const CLOAK_OPTIONS = [
 export const Navbar = ({
   currentCategory,
   onSelectCategory,
-  onOpenAddModal,
-  onOpenJsonModal,
+  onOpenLeaderboard,
+  isLeaderboardOpen,
   onTriggerPanic,
   currentCloak,
   onSelectCloak
@@ -38,11 +38,11 @@ export const Navbar = ({
           </span>
         </div>
 
-        {/* Zone 2: Single-line category links */}
+        {/* Zone 2: Single-line navigation links */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
-          {['All', 'Retro', 'Puzzle', 'Action', 'Favorites'].map((cat) => {
+          {['All', 'Action', 'Puzzle', 'Retro', 'Favorites'].map((cat) => {
             const label = cat === 'All' ? 'All Games' : cat;
-            const active = currentCategory === cat;
+            const active = !isLeaderboardOpen && currentCategory === cat;
             return (
               <button
                 key={cat}
@@ -60,11 +60,37 @@ export const Navbar = ({
               </button>
             );
           })}
+          <button
+            onClick={onOpenLeaderboard}
+            className={`relative py-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${
+              isLeaderboardOpen
+                ? 'text-cyan-300 font-semibold drop-shadow-[0_0_8px_rgba(34,211,238,0.65)]'
+                : 'hover:text-white'
+            }`}
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-300" />
+            <span>Leaderboard</span>
+            {isLeaderboardOpen && (
+              <span className="absolute left-0 right-0 -bottom-1 h-0.5 rounded-full bg-gradient-to-r from-cyan-400 to-purple-500 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+            )}
+          </button>
         </nav>
 
         {/* Zone 3: Actions */}
         <div className="flex items-center gap-2.5 shrink-0">
           
+          {/* Mobile Leaderboard Quick Access */}
+          <button
+            onClick={onOpenLeaderboard}
+            title="Leaderboard"
+            className={`md:hidden flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap shrink-0 cursor-pointer ${
+              isLeaderboardOpen ? 'neon-btn-purple' : 'neon-btn-outline'
+            }`}
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-300" />
+            <span className="hidden xs:inline">Ranks</span>
+          </button>
+
           {/* Stealth Tab Cloaker dropdown */}
           <div className="relative">
             <button
@@ -112,25 +138,6 @@ export const Navbar = ({
           >
             <ShieldAlert className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Panic (Esc)</span>
-          </button>
-
-          {/* Raw JSON viewer */}
-          <button
-            onClick={onOpenJsonModal}
-            title="Inspect games.json (All iframe records)"
-            className="neon-btn-outline flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap shrink-0 cursor-pointer"
-          >
-            <Code2 className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">games.json</span>
-          </button>
-
-          {/* Add Game CTA */}
-          <button
-            onClick={onOpenAddModal}
-            className="neon-btn-cyan flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg whitespace-nowrap shrink-0 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Game</span>
           </button>
         </div>
 

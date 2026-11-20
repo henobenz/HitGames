@@ -9,15 +9,29 @@ import {
   Share2, 
   Check, 
   Gamepad2,
-  Trash2
+  Trash2,
+  Trophy,
+  Clock
 } from 'lucide-react';
 import { extractIframeSrc } from '../utils/iframeHelper';
+
+function formatClock(totalSeconds) {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
 
 export const TheaterPlayer = ({
   game,
   isFavorite,
+  sessionCount = 0,
+  bestScore = null,
+  defaultPlayerName = '',
   onToggleFavorite,
   onRemoveGame,
+  onRecordPlaySeconds,
+  onSaveScore,
+  onOpenLeaderboard,
   onClose,
   onSelectGame,
   allGames
@@ -28,15 +42,33 @@ export const TheaterPlayer = ({
   const [copied, setCopied] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   const [isFrameLoading, setIsFrameLoading] = useState(true);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [playerName, setPlayerName] = useState(defaultPlayerName || '');
+  const [scoreValue, setScoreValue] = useState('');
+  const [scoreSaved, setScoreSaved] = useState(false);
 
   const iframeSrc = extractIframeSrc(game.iframe);
   const isExternal = /^https?:\/\//i.test(iframeSrc);
 
   useEffect(() => {
     setIsFrameLoading(true);
+    setElapsedSeconds(0);
+    setScoreSaved(false);
     const fallbackTimer = setTimeout(() => setIsFrameLoading(false), 2600);
     return () => clearTimeout(fallbackTimer);
   }, [game.id, iframeKey]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        setElapsedSeconds(prev => prev + 1);
+        if (onRecordPlaySeconds) {
+          onRecordPlaySeconds(game.id, 1);
+        }
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [game.id, onRecordPlaySeconds]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -71,6 +103,21 @@ export const TheaterPlayer = ({
     });
   };
 
+  const handleScoreSubmit = (e) => {
+    e.preventDefault();
+    const numeric = Number(scoreValue);
+    if (!Number.isFinite(numeric) || numeric < 0 || !onSaveScore) return;
+    onSaveScore({
+      gameId: game.id,
+      player: playerName.trim() || 'Player 1',
+      score: numeric,
+      note: ''
+    });
+    setScoreValue('');
+    setScoreSaved(true);
+    setTimeout(() => setScoreSaved(false), 2500);
+  };
+
   const relatedGames = allGames
     .filter(g => g.id !== game.id && (g.category === game.category || g.featured))
     .slice(0, 4);
@@ -103,16 +150,20 @@ export const TheaterPlayer = ({
       >
         {/* Game Arena Toolbar */}
         <div className="flex items-center justify-between px-4 py-2.5 bg-[#090c22] border-b border-purple-500/25 shrink-0">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <span className="font-display text-sm font-bold text-white tracking-wide truncate max-w-xs sm:max-w-md">
               {game.title}
             </span>
-            <span className="hidden sm:inline text-xs text-cyan-300/80">
+            <span className="hidden sm:inline text-xs text-cyan-300/80 whitespace-nowrap">
               · {game.category}
+            </span>
+            <span className="hidden md:inline-flex items-center gap-1 text-xs text-slate-400 font-mono-code tabular-nums whitespace-nowrap">
+              <Clock className="w-3.5 h-3.5 text-purple-300" />
+              {formatClock(elapsedSeconds)}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Reload Frame */}
             <button
               onClick={handleReload}
@@ -231,24 +282,22 @@ export const TheaterPlayer = ({
         </div>
       </div>
 
-      {/* Game Details & Controls Cheat Sheet */}
+      {/* Game Details, Controls & Score Logger */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left 2 Cols: Details & Controls */}
+        {/* Left 2 Cols: Details, Controls & High Score Submission */}
         <div className="lg:col-span-2 flex flex-col gap-4 bg-[#080b1f]/90 border border-purple-500/25 rounded-2xl p-5 shadow-lg">
-          <div className="flex items-center justify-between pb-3 border-b border-purple-500/20">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-purple-500/20">
             <div>
               <h2 className="font-display text-xl font-bold text-white mb-1">{game.title}</h2>
               <div className="flex items-center gap-2 text-xs text-slate-400 tabular-nums">
                 <span className="text-cyan-300 font-medium">{game.category}</span>
                 <span aria-hidden="true" className="text-purple-400/50">·</span>
-                <span className="text-amber-300 font-medium">★ {game.rating.toFixed(2)}</span>
-                <span aria-hidden="true" className="text-purple-400/50">·</span>
-                <span>{game.playedCount.toLocaleString()} plays</span>
-                {game.isCustom && (
+                <span>{sessionCount} {sessionCount === 1 ? 'session played' : 'sessions played'}</span>
+                {bestScore !== null && (
                   <>
                     <span aria-hidden="true" className="text-purple-400/50">·</span>
-                    <span className="text-cyan-300 font-medium">User Added</span>
+                    <span className="text-amber-300 font-medium">Best: {Number(bestScore).toLocaleString()}</span>
                   </>
                 )}
               </div>
@@ -283,6 +332,53 @@ export const TheaterPlayer = ({
               {game.controls}
             </p>
           </div>
+
+          {/* Quick Score Logger */}
+          {onSaveScore && (
+            <form onSubmit={handleScoreSubmit} className="bg-[#04050f]/90 border border-purple-500/25 rounded-xl p-3.5 flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
+                  <Trophy className="w-4 h-4" />
+                  <span>Record Score to Leaderboard</span>
+                </div>
+                {onOpenLeaderboard && (
+                  <button
+                    type="button"
+                    onClick={onOpenLeaderboard}
+                    className="text-[11px] text-cyan-300 hover:text-white transition-colors cursor-pointer"
+                  >
+                    View Standings →
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                <input
+                  type="text"
+                  maxLength={18}
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  placeholder="Player Tag"
+                  className="sm:col-span-5 px-3 py-2 bg-[#080b1f] border border-purple-500/30 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  required
+                  value={scoreValue}
+                  onChange={(e) => setScoreValue(e.target.value)}
+                  placeholder="Score"
+                  className="sm:col-span-4 px-3 py-2 bg-[#080b1f] border border-purple-500/30 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 tabular-nums"
+                />
+                <button
+                  type="submit"
+                  className="sm:col-span-3 neon-btn-cyan px-3 py-2 text-xs font-bold rounded-lg cursor-pointer"
+                >
+                  {scoreSaved ? 'Saved!' : 'Save Score'}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
 
         {/* Right 1 Col: More games */}
@@ -312,10 +408,10 @@ export const TheaterPlayer = ({
                   <span className="text-xs font-bold text-slate-100 group-hover:text-cyan-300 truncate transition-colors">
                     {rel.title}
                   </span>
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400 tabular-nums">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
                     <span>{rel.category}</span>
                     <span aria-hidden="true" className="text-purple-400/50">·</span>
-                    <span className="text-amber-300">★ {rel.rating}</span>
+                    <span className="text-purple-300">Play →</span>
                   </div>
                 </div>
               </div>

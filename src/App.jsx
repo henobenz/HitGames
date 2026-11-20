@@ -1,20 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   Search, 
   X, 
   Gamepad2, 
   Flame, 
-  Plus, 
   ArrowRight,
   SlidersHorizontal,
-  Code2
+  ChevronLeft,
+  ChevronRight,
+  Shuffle,
+  Trophy,
+  History
 } from 'lucide-react';
 import { Navbar, CLOAK_OPTIONS } from './components/Navbar';
 import { GameCard } from './components/GameCard';
 import { TheaterPlayer } from './components/TheaterPlayer';
-import { AddGameModal } from './components/AddGameModal';
-import { JsonViewerModal } from './components/JsonViewerModal';
 import { PanicOverlay } from './components/PanicOverlay';
+import { LeaderboardView } from './components/LeaderboardView';
 import arcadeHeroThumbnail from './assets/images/playvault_arcade_thumbnail_1795159396107.jpg';
 
 export default function App() {
@@ -22,14 +24,20 @@ export default function App() {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
+  const [activeView, setActiveView] = useState('catalog'); // 'catalog' | 'leaderboard'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [sortBy, setSortBy] = useState('popular');
+  const [sortBy, setSortBy] = useState('featured');
   const [favorites, setFavorites] = useState([]);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isJsonModalOpen, setIsJsonModalOpen] = useState(false);
+  const [recentIds, setRecentIds] = useState([]);
+  const [playStats, setPlayStats] = useState({});
+  const [leaderboardEntries, setLeaderboardEntries] = useState([]);
+  const [playerHandle, setPlayerHandle] = useState('');
+  const [spotlightIndex, setSpotlightIndex] = useState(0);
+  const [isSpotlightPaused, setIsSpotlightPaused] = useState(false);
   const [isPanicOpen, setIsPanicOpen] = useState(false);
   const [currentCloak, setCurrentCloak] = useState('default');
+  const searchInputRef = useRef(null);
 
   useEffect(() => {
     async function loadGames() {
@@ -60,6 +68,9 @@ export default function App() {
         }
 
         setGames(initialGames);
+        if (initialGames.length > 0) {
+          setSpotlightIndex(Math.floor(Math.random() * initialGames.length));
+        }
 
         const urlParams = new URLSearchParams(window.location.search);
         const gameParam = urlParams.get('game');
@@ -78,12 +89,28 @@ export default function App() {
 
     loadGames();
 
-    const storedFavs = localStorage.getItem('playvault_favorites');
-    if (storedFavs) {
-      try {
-        setFavorites(JSON.parse(storedFavs));
-      } catch (e) {}
-    }
+    try {
+      const storedFavs = localStorage.getItem('playvault_favorites');
+      if (storedFavs) setFavorites(JSON.parse(storedFavs));
+    } catch (e) {}
+
+    try {
+      const storedRecent = localStorage.getItem('playvault_recent');
+      if (storedRecent) setRecentIds(JSON.parse(storedRecent));
+    } catch (e) {}
+
+    try {
+      const storedStats = localStorage.getItem('playvault_stats');
+      if (storedStats) setPlayStats(JSON.parse(storedStats));
+    } catch (e) {}
+
+    try {
+      const storedBoard = localStorage.getItem('playvault_leaderboard');
+      if (storedBoard) setLeaderboardEntries(JSON.parse(storedBoard));
+    } catch (e) {}
+
+    const storedHandle = localStorage.getItem('playvault_player_name');
+    if (storedHandle) setPlayerHandle(storedHandle);
 
     const storedCloak = localStorage.getItem('playvault_cloak');
     if (storedCloak) {
@@ -100,11 +127,36 @@ export default function App() {
         if (!isPanicOpen) {
           setIsPanicOpen(true);
         }
+      } else if (
+        e.key === '/' &&
+        !isPanicOpen &&
+        !selectedGame &&
+        activeView === 'catalog' &&
+        document.activeElement?.tagName !== 'INPUT' &&
+        document.activeElement?.tagName !== 'TEXTAREA'
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [isPanicOpen]);
+  }, [isPanicOpen, selectedGame, activeView]);
+
+  // Auto-cycle Featured Spotlight across all games
+  useEffect(() => {
+    if (games.length <= 1 || isSpotlightPaused || selectedGame || activeView !== 'catalog') return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const timer = setInterval(() => {
+      setSpotlightIndex(prev => (prev + 1) % games.length);
+    }, 6500);
+    return () => clearInterval(timer);
+  }, [games.length, isSpotlightPaused, selectedGame, activeView]);
+
+  useEffect(() => {
+    setHeroThumbError(false);
+  }, [spotlightIndex]);
 
   const applyCloak = (option) => {
     setCurrentCloak(option.id);
@@ -121,6 +173,86 @@ export default function App() {
     link.href = option.faviconUrl;
   };
 
+  const handleSelectGame = useCallback((game) => {
+    if (!game) return;
+    setSelectedGame(game);
+    setActiveView('catalog');
+
+    setRecentIds(prev => {
+      const next = [game.id, ...prev.filter(id => id !== game.id)].slice(0, 6);
+      localStorage.setItem('playvault_recent', JSON.stringify(next));
+      return next;
+    });
+
+    setPlayStats(prev => {
+      const current = prev[game.id] || { sessions: 0, totalSeconds: 0, lastPlayed: 0 };
+      const next = {
+        ...prev,
+        [game.id]: {
+          ...current,
+          sessions: (current.sessions || 0) + 1,
+          lastPlayed: Date.now()
+        }
+      };
+      localStorage.setItem('playvault_stats', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const handleRecordPlaySeconds = useCallback((gameId, deltaSeconds) => {
+    setPlayStats(prev => {
+      const current = prev[gameId] || { sessions: 1, totalSeconds: 0, lastPlayed: Date.now() };
+      const next = {
+        ...prev,
+        [gameId]: {
+          ...current,
+          totalSeconds: (current.totalSeconds || 0) + deltaSeconds,
+          lastPlayed: Date.now()
+        }
+      };
+      localStorage.setItem('playvault_stats', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const handleSaveScore = useCallback(({ gameId, player, score, note }) => {
+    const cleanPlayer = (player || 'Player 1').trim().slice(0, 18);
+    setPlayerHandle(cleanPlayer);
+    localStorage.setItem('playvault_player_name', cleanPlayer);
+
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      gameId,
+      player: cleanPlayer,
+      score: Number(score),
+      note: note || '',
+      createdAt: Date.now()
+    };
+
+    setLeaderboardEntries(prev => {
+      const next = [entry, ...prev].slice(0, 100);
+      localStorage.setItem('playvault_leaderboard', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const handleDeleteScore = useCallback((entryId) => {
+    setLeaderboardEntries(prev => {
+      const next = prev.filter(e => e.id !== entryId);
+      localStorage.setItem('playvault_leaderboard', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const handleResetStats = useCallback(() => {
+    setPlayStats({});
+    setRecentIds([]);
+    setLeaderboardEntries([]);
+    localStorage.removeItem('playvault_stats');
+    localStorage.removeItem('playvault_recent');
+    localStorage.removeItem('playvault_leaderboard');
+  }, []);
+
   const handleToggleFavorite = (id, e) => {
     e.stopPropagation();
     setFavorites(prev => {
@@ -128,26 +260,6 @@ export default function App() {
       localStorage.setItem('playvault_favorites', JSON.stringify(next));
       return next;
     });
-  };
-
-  const handleAddGame = (newGame) => {
-    setGames(prev => [newGame, ...prev]);
-
-    const storedCustom = localStorage.getItem('playvault_custom_games');
-    let currentCustom = [];
-    if (storedCustom) {
-      try { currentCustom = JSON.parse(storedCustom); } catch (e) {}
-    }
-    currentCustom = [newGame, ...currentCustom.filter(g => g.id !== newGame.id)];
-    localStorage.setItem('playvault_custom_games', JSON.stringify(currentCustom));
-
-    setSelectedGame(newGame);
-  };
-
-  const handleImportJson = (importedList) => {
-    setGames(importedList);
-    const customOnly = importedList.filter(g => g.isCustom);
-    localStorage.setItem('playvault_custom_games', JSON.stringify(customOnly));
   };
 
   const handleRemoveGame = (id, e) => {
@@ -166,6 +278,15 @@ export default function App() {
     }
   };
 
+  const handleLaunchRandom = () => {
+    if (games.length === 0) return;
+    const pool = games.length > 1 && selectedGame
+      ? games.filter(g => g.id !== selectedGame.id)
+      : games;
+    const picked = pool[Math.floor(Math.random() * pool.length)];
+    handleSelectGame(picked);
+  };
+
   const filteredGames = useMemo(() => {
     return games
       .filter(game => {
@@ -182,32 +303,54 @@ export default function App() {
           const matchTitle = game.title.toLowerCase().includes(q);
           const matchCategory = game.category.toLowerCase().includes(q);
           const matchDesc = game.description.toLowerCase().includes(q);
-          const matchTags = game.tags.some(t => t.toLowerCase().includes(q));
+          const matchTags = (game.tags || []).some(t => t.toLowerCase().includes(q));
           return matchTitle || matchCategory || matchDesc || matchTags;
         }
 
         return true;
       })
       .sort((a, b) => {
-        if (sortBy === 'popular') return b.playedCount - a.playedCount;
-        if (sortBy === 'rating') return b.rating - a.rating;
+        if (sortBy === 'featured') {
+          return Number(Boolean(b.featured)) - Number(Boolean(a.featured));
+        }
+        if (sortBy === 'sessions') {
+          const sa = playStats[a.id]?.sessions || 0;
+          const sb = playStats[b.id]?.sessions || 0;
+          if (sb !== sa) return sb - sa;
+          return a.title.localeCompare(b.title);
+        }
         if (sortBy === 'alphabetical') return a.title.localeCompare(b.title);
+        if (sortBy === 'category') return a.category.localeCompare(b.category) || a.title.localeCompare(b.title);
         return 0;
       });
-  }, [games, selectedCategory, searchQuery, sortBy, favorites]);
+  }, [games, selectedCategory, searchQuery, sortBy, favorites, playStats]);
 
-  const featuredSpotlight = useMemo(() => {
-    return games.find(g => g.id === 'snake') || games[0];
-  }, [games]);
+  const featuredSpotlight = games.length > 0 ? games[spotlightIndex % games.length] : null;
+
+  const recentGames = useMemo(() => {
+    const map = {};
+    games.forEach(g => { map[g.id] = g; });
+    return recentIds.map(id => map[id]).filter(Boolean).slice(0, 4);
+  }, [recentIds, games]);
+
+  const bestScoreByGame = useMemo(() => {
+    const best = {};
+    leaderboardEntries.forEach(e => {
+      if (best[e.gameId] === undefined || e.score > best[e.gameId]) {
+        best[e.gameId] = e.score;
+      }
+    });
+    return best;
+  }, [leaderboardEntries]);
 
   const CATEGORIES = [
     'All',
     'Featured',
     'Favorites',
+    'Action',
+    'Puzzle',
     'Retro',
     'Arcade',
-    'Puzzle',
-    'Action',
     'Casual',
     'Strategy'
   ];
@@ -221,12 +364,16 @@ export default function App() {
       {/* Top Navigation */}
       <Navbar
         currentCategory={selectedCategory}
+        isLeaderboardOpen={activeView === 'leaderboard' && !selectedGame}
         onSelectCategory={(cat) => {
           setSelectedCategory(cat);
+          setActiveView('catalog');
           setSelectedGame(null);
         }}
-        onOpenAddModal={() => setIsAddModalOpen(true)}
-        onOpenJsonModal={() => setIsJsonModalOpen(true)}
+        onOpenLeaderboard={() => {
+          setSelectedGame(null);
+          setActiveView('leaderboard');
+        }}
         onTriggerPanic={() => setIsPanicOpen(true)}
         currentCloak={currentCloak}
         onSelectCloak={applyCloak}
@@ -238,68 +385,150 @@ export default function App() {
           <TheaterPlayer
             game={selectedGame}
             isFavorite={favorites.includes(selectedGame.id)}
+            sessionCount={playStats[selectedGame.id]?.sessions || 0}
+            bestScore={bestScoreByGame[selectedGame.id] ?? null}
+            defaultPlayerName={playerHandle}
             onToggleFavorite={handleToggleFavorite}
             onRemoveGame={handleRemoveGame}
+            onRecordPlaySeconds={handleRecordPlaySeconds}
+            onSaveScore={handleSaveScore}
+            onOpenLeaderboard={() => {
+              setSelectedGame(null);
+              setActiveView('leaderboard');
+            }}
             onClose={() => {
               setSelectedGame(null);
               const url = new URL(window.location.href);
               url.searchParams.delete('game');
               window.history.replaceState({}, '', url.toString());
             }}
-            onSelectGame={(g) => setSelectedGame(g)}
+            onSelectGame={handleSelectGame}
             allGames={games}
+          />
+        ) : activeView === 'leaderboard' ? (
+          <LeaderboardView
+            games={games}
+            playStats={playStats}
+            leaderboardEntries={leaderboardEntries}
+            defaultPlayerName={playerHandle}
+            onSaveScore={handleSaveScore}
+            onDeleteScore={handleDeleteScore}
+            onResetStats={handleResetStats}
+            onSelectGame={handleSelectGame}
           />
         ) : (
           <div className="flex flex-col gap-8">
             
-            {/* Hero Spotlight Section */}
+            {/* Dynamic Featured Spotlight Carousel (Rotates Across All Games) */}
             {selectedCategory === 'All' && !searchQuery && featuredSpotlight && (
-              <div className="relative rounded-2xl bg-gradient-to-br from-[#0e1230] via-[#080b1f] to-[#050714] border border-purple-500/35 p-6 sm:p-8 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.75),0_0_32px_rgba(168,85,247,0.14)]">
+              <div
+                onMouseEnter={() => setIsSpotlightPaused(true)}
+                onMouseLeave={() => setIsSpotlightPaused(false)}
+                className="relative rounded-2xl bg-gradient-to-br from-[#0e1230] via-[#080b1f] to-[#050714] border border-purple-500/35 p-6 sm:p-8 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.75),0_0_32px_rgba(168,85,247,0.14)]"
+              >
                 <div className="absolute -top-20 right-10 w-80 h-80 bg-cyan-400/15 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute -bottom-24 left-1/3 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
                 
                 <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                  <div className="lg:col-span-7 flex flex-col justify-center gap-3">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-cyan-300">
-                      <Flame className="w-4 h-4 text-purple-400" />
-                      <span>Featured Neon Arcade Spotlight</span>
-                      <span aria-hidden="true" className="text-purple-400/50">·</span>
-                      <span className="text-slate-300">{featuredSpotlight.category}</span>
+                  <div className="lg:col-span-7 flex flex-col justify-between gap-4">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-cyan-300">
+                          <Flame className="w-4 h-4 text-purple-400" />
+                          <span>Featured Spotlight</span>
+                          <span aria-hidden="true" className="text-purple-400/50">·</span>
+                          <span className="text-slate-300">{featuredSpotlight.category}</span>
+                          <span aria-hidden="true" className="text-purple-400/50">·</span>
+                          <span className="text-slate-400 font-mono-code tabular-nums">
+                            {(spotlightIndex % games.length) + 1}/{games.length}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSpotlightIndex(prev => (prev - 1 + games.length) % games.length)}
+                            title="Previous featured game"
+                            className="neon-btn-outline p-1.5 rounded-lg cursor-pointer"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSpotlightIndex(prev => (prev + 1) % games.length)}
+                            title="Next featured game"
+                            className="neon-btn-outline p-1.5 rounded-lg cursor-pointer"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-white text-balance drop-shadow-[0_0_16px_rgba(34,211,238,0.22)]">
+                        {featuredSpotlight.title}
+                      </h1>
+
+                      <p className="text-sm text-slate-300 leading-relaxed max-w-xl">
+                        {featuredSpotlight.description}
+                      </p>
                     </div>
 
-                    <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-white text-balance drop-shadow-[0_0_16px_rgba(34,211,238,0.22)]">
-                      {featuredSpotlight.title}
-                    </h1>
+                    <div className="flex flex-col gap-3 pt-1">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <button
+                          onClick={() => handleSelectGame(featuredSpotlight)}
+                          className="neon-btn-cyan flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm cursor-pointer"
+                        >
+                          <span>Play Now</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
 
-                    <p className="text-sm text-slate-300 leading-relaxed max-w-xl">
-                      {featuredSpotlight.description}
-                    </p>
+                        <button
+                          type="button"
+                          onClick={() => setSpotlightIndex(prev => (prev + 1) % games.length)}
+                          className="neon-btn-outline px-4 py-2.5 rounded-xl font-semibold text-xs cursor-pointer"
+                        >
+                          Next Spotlight
+                        </button>
 
-                    <div className="flex flex-wrap items-center gap-4 pt-2">
-                      <button
-                        onClick={() => setSelectedGame(featuredSpotlight)}
-                        className="neon-btn-cyan flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm cursor-pointer"
-                      >
-                        <span>Play Instantly</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                      
-                      <div className="flex items-center gap-2 text-xs text-slate-300 tabular-nums">
-                        <span className="text-amber-300 font-semibold">★ {featuredSpotlight.rating.toFixed(1)}</span>
-                        <span aria-hidden="true" className="text-purple-400/60">·</span>
-                        <span>{featuredSpotlight.playedCount.toLocaleString()} plays</span>
+                        {(playStats[featuredSpotlight.id]?.sessions || 0) > 0 && (
+                          <span className="text-xs text-purple-300 tabular-nums">
+                            Played {playStats[featuredSpotlight.id].sessions} {playStats[featuredSpotlight.id].sessions === 1 ? 'time' : 'times'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Spotlight Quick Switcher Dots */}
+                      <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                        {games.map((g, idx) => {
+                          const active = idx === (spotlightIndex % games.length);
+                          return (
+                            <button
+                              key={g.id}
+                              type="button"
+                              onClick={() => setSpotlightIndex(idx)}
+                              title={g.title}
+                              aria-label={`Show ${g.title} in spotlight`}
+                              className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                                active
+                                  ? 'w-7 bg-gradient-to-r from-cyan-400 to-purple-500 shadow-[0_0_8px_rgba(34,211,238,0.7)]'
+                                  : 'w-2 bg-slate-700 hover:bg-purple-400/70'
+                              }`}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
 
                   <div
-                    onClick={() => setSelectedGame(featuredSpotlight)}
-                    className="lg:col-span-5 relative aspect-[16/9] lg:aspect-auto min-h-[190px] rounded-xl overflow-hidden border border-cyan-400/35 bg-[#050716] cursor-pointer group shadow-[0_0_24px_rgba(34,211,238,0.18)]"
+                    onClick={() => handleSelectGame(featuredSpotlight)}
+                    className="lg:col-span-5 relative aspect-[16/9] lg:aspect-auto min-h-[200px] rounded-xl overflow-hidden border border-cyan-400/35 bg-[#050716] cursor-pointer group shadow-[0_0_24px_rgba(34,211,238,0.18)]"
                   >
                     {!heroThumbError ? (
                       <img
-                        src={arcadeHeroThumbnail}
-                        alt="PlayVault Neon Arcade Cabinet Thumbnail"
+                        src={featuredSpotlight.thumbnail || arcadeHeroThumbnail}
+                        alt={`${featuredSpotlight.title} spotlight thumbnail`}
                         referrerPolicy="no-referrer"
                         onError={() => setHeroThumbError(true)}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -311,7 +540,57 @@ export default function App() {
                       </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#04050f]/80 via-transparent to-transparent pointer-events-none" />
+                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-slate-200 pointer-events-none">
+                      <span className="font-display font-bold text-white drop-shadow">{featuredSpotlight.title}</span>
+                      <span className="text-cyan-300 font-semibold">Launch →</span>
+                    </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Continue Playing Strip */}
+            {selectedCategory === 'All' && !searchQuery && recentGames.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+                    <History className="w-4 h-4 text-cyan-400" />
+                    <span className="font-display text-sm font-bold text-white">Continue Playing</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveView('leaderboard')}
+                    className="text-xs text-cyan-300 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trophy className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Open Leaderboard</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {recentGames.map(rg => (
+                    <button
+                      key={rg.id}
+                      type="button"
+                      onClick={() => handleSelectGame(rg)}
+                      className="flex items-center gap-3 p-2.5 rounded-xl bg-[#080b1f]/90 hover:bg-[#0e1333] border border-purple-500/25 hover:border-cyan-400/60 transition-all text-left cursor-pointer group"
+                    >
+                      <img
+                        src={rg.thumbnail || `./thumbnails/${rg.id}.svg`}
+                        alt={rg.title}
+                        referrerPolicy="no-referrer"
+                        className="w-16 h-10 rounded-lg object-cover border border-purple-500/30 shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold text-white group-hover:text-cyan-300 truncate transition-colors">
+                          {rg.title}
+                        </div>
+                        <div className="text-[11px] text-slate-400 tabular-nums">
+                          {rg.category} · {playStats[rg.id]?.sessions || 1} {(playStats[rg.id]?.sessions || 1) === 1 ? 'play' : 'plays'}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -324,10 +603,11 @@ export default function App() {
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400/80 pointer-events-none" />
                   <input
+                    ref={searchInputRef}
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search games, tags, or categories..."
+                    placeholder="Search games, tags, or categories... (Press /)"
                     className="w-full pl-10 pr-9 py-2.5 bg-[#080b1f]/90 border border-purple-500/30 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_16px_rgba(34,211,238,0.2)] transition-all"
                   />
                   {searchQuery && (
@@ -340,19 +620,31 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Sort selector */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <SlidersHorizontal className="w-4 h-4 text-purple-400" />
-                  <span className="text-xs text-slate-400">Sort:</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="px-3 py-2 bg-[#080b1f] border border-purple-500/30 rounded-xl text-xs font-medium text-slate-100 focus:outline-none focus:border-cyan-400 cursor-pointer"
+                {/* Sort selector + Random Game Launcher */}
+                <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleLaunchRandom}
+                    className="neon-btn-purple flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer"
                   >
-                    <option value="popular">Most Popular</option>
-                    <option value="rating">Highest Rated</option>
-                    <option value="alphabetical">Title (A-Z)</option>
-                  </select>
+                    <Shuffle className="w-3.5 h-3.5" />
+                    <span>Random Game</span>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal className="w-4 h-4 text-purple-400" />
+                    <span className="text-xs text-slate-400">Sort:</span>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="px-3 py-2 bg-[#080b1f] border border-purple-500/30 rounded-xl text-xs font-medium text-slate-100 focus:outline-none focus:border-cyan-400 cursor-pointer"
+                    >
+                      <option value="featured">Featured First</option>
+                      <option value="sessions">Most Played (Yours)</option>
+                      <option value="alphabetical">Title (A-Z)</option>
+                      <option value="category">Category</option>
+                    </select>
+                  </div>
                 </div>
 
               </div>
@@ -400,7 +692,7 @@ export default function App() {
               </div>
 
               <div className="text-[11px] text-slate-400 hidden sm:block">
-                Press <kbd className="px-1.5 py-0.5 bg-[#0a0e26] border border-purple-500/40 rounded font-mono text-[10px] text-cyan-300">Esc</kbd> anytime for Panic Cloak
+                Press <kbd className="px-1.5 py-0.5 bg-[#0a0e26] border border-purple-500/40 rounded font-mono text-[10px] text-cyan-300">/</kbd> to search · <kbd className="px-1.5 py-0.5 bg-[#0a0e26] border border-purple-500/40 rounded font-mono text-[10px] text-cyan-300">Esc</kbd> for Panic Cloak
               </div>
             </div>
 
@@ -418,9 +710,10 @@ export default function App() {
                     key={game.id}
                     game={game}
                     isFavorite={favorites.includes(game.id)}
+                    sessionCount={playStats[game.id]?.sessions || 0}
                     onToggleFavorite={handleToggleFavorite}
                     onRemoveGame={handleRemoveGame}
-                    onSelectGame={(g) => setSelectedGame(g)}
+                    onSelectGame={handleSelectGame}
                   />
                 ))}
               </div>
@@ -434,7 +727,7 @@ export default function App() {
                 <p className="text-xs text-slate-400 max-w-sm mb-4">
                   {selectedCategory === 'Favorites'
                     ? "You haven't bookmarked any games yet. Click the star icon on any game to pin it here!"
-                    : "No games matched your active search query or filter. Try a different search term or add your own iframe game!"}
+                    : "No games matched your active search query or filter. Try a different search term or reset your filters."}
                 </p>
                 <div className="flex items-center gap-3">
                   {(searchQuery || selectedCategory !== 'All') && (
@@ -448,13 +741,6 @@ export default function App() {
                       Reset Filters
                     </button>
                   )}
-                  <button
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="neon-btn-cyan px-4 py-2 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Custom Game</span>
-                  </button>
                 </div>
               </div>
             )}
@@ -472,23 +758,24 @@ export default function App() {
             <span aria-hidden="true" className="text-purple-400/50">·</span>
             <span>Neon Arcade Portal</span>
             <span aria-hidden="true" className="text-purple-400/50">·</span>
-            <span>All games stored as client-side iframes</span>
+            <span>Instant browser arcade games</span>
           </div>
 
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setIsJsonModalOpen(true)}
-              className="hover:text-cyan-300 transition-colors flex items-center gap-1 cursor-pointer"
+              onClick={() => {
+                setSelectedGame(null);
+                setActiveView('leaderboard');
+              }}
+              className="hover:text-cyan-300 transition-colors cursor-pointer"
             >
-              <Code2 className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Inspect games.json</span>
+              Leaderboard
             </button>
             <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="hover:text-purple-300 transition-colors flex items-center gap-1 cursor-pointer"
+              onClick={handleLaunchRandom}
+              className="hover:text-purple-300 transition-colors cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5 text-purple-400" />
-              <span>Add Game Iframe</span>
+              Random Game
             </button>
             <button
               onClick={() => setIsPanicOpen(true)}
@@ -499,19 +786,6 @@ export default function App() {
           </div>
         </div>
       </footer>
-
-      <AddGameModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAddGame={handleAddGame}
-      />
-
-      <JsonViewerModal
-        isOpen={isJsonModalOpen}
-        onClose={() => setIsJsonModalOpen(false)}
-        games={games}
-        onImportJson={handleImportJson}
-      />
 
     </div>
   );
