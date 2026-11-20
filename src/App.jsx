@@ -771,7 +771,10 @@ export default function App() {
       <footer className="mt-auto border-t border-purple-500/20 bg-[#04050f]/95 py-8 text-xs text-slate-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-display font-bold text-cyan-300">PlayVault</span>
+            <span className="font-display font-bold tracking-wide">
+              <span className="text-white">Nex</span>
+              <span className="bg-gradient-to-r from-cyan-300 to-purple-400 bg-clip-text text-transparent">Arcade</span>
+            </span>
             <span aria-hidden="true" className="text-purple-400/50">·</span>
             <span>Neon Arcade Portal</span>
             <span aria-hidden="true" className="text-purple-400/50">·</span>

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Gamepad2, ShieldAlert, Check, EyeOff, Trophy } from 'lucide-react';
+import { ShieldAlert, Check, EyeOff, Trophy } from 'lucide-react';
 
 export const CLOAK_OPTIONS = [
-  { id: 'default', label: 'Default (PlayVault)', title: 'PlayVault — Neon Arcade Hub', faviconUrl: './favicon.svg' },
+  { id: 'default', label: 'Default (NexArcade)', title: 'NexArcade — Neon Arcade Hub', faviconUrl: './favicon.svg' },
   { id: 'classroom', label: 'Google Classroom', title: 'Classes — Google Classroom', faviconUrl: 'https://ssl.gstatic.com/classroom/favicon.png' },
   { id: 'drive', label: 'Google Drive', title: 'My Drive — Google Drive', faviconUrl: 'https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png' },
   { id: 'docs', label: 'Google Docs', title: 'Untitled Document — Google Docs', faviconUrl: 'https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico' },
@@ -26,17 +26,24 @@ export const Navbar = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
         
         {/* Zone 1: Brand Wordmark */}
-        <div 
-          onClick={() => onSelectCategory('All')} 
-          className="flex items-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0 group"
+        <button
+          type="button"
+          onClick={() => onSelectCategory('All')}
+          className="flex items-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0 group focus:outline-none"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600/30 to-cyan-500/20 border border-cyan-400/50 shadow-[0_0_14px_rgba(34,211,238,0.3)] flex items-center justify-center text-cyan-300 group-hover:border-cyan-300 group-hover:shadow-[0_0_20px_rgba(168,85,247,0.5)] group-hover:scale-105 transition-all">
-            <Gamepad2 className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0f163b] via-[#090d26] to-[#04050f] border border-cyan-400/50 shadow-[0_0_16px_rgba(34,211,238,0.28),inset_0_0_10px_rgba(168,85,247,0.2)] flex items-center justify-center group-hover:border-cyan-300 group-hover:shadow-[0_0_22px_rgba(34,211,238,0.45),0_0_28px_rgba(168,85,247,0.35)] group-hover:scale-105 transition-all">
+            <svg viewBox="0 0 32 32" fill="none" className="w-5 h-5" aria-hidden="true">
+              <path d="M6 23V9L14 23V9" stroke="#22d3ee" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M18 9L26 23M26 9L18 23" stroke="#c084fc" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </div>
-          <span className="font-display text-xl font-bold tracking-tight bg-gradient-to-r from-cyan-300 via-sky-200 to-purple-400 bg-clip-text text-transparent group-hover:brightness-110 transition-all">
-            PlayVault
+          <span className="font-display text-xl font-bold tracking-wide leading-none flex items-baseline">
+            <span className="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">Nex</span>
+            <span className="bg-gradient-to-r from-cyan-300 via-sky-300 to-purple-400 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(34,211,238,0.45)] group-hover:brightness-110 transition-all">
+              Arcade
+            </span>
           </span>
-        </div>
+        </button>
 
         {/* Zone 2: Single-line navigation links */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">

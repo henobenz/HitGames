@@ -87,7 +87,7 @@ export const PersistentLeaderboardDrawer = ({
     <div className="fixed bottom-4 right-4 z-30 flex flex-col items-end gap-2.5 pointer-events-none">
       {isOpen && (
         <aside
-          aria-label="PlayVault Leaderboards"
+          aria-label="NexArcade Leaderboards"
           className="pointer-events-auto w-[calc(100vw-2rem)] sm:w-[420px] max-h-[78vh] flex flex-col bg-[#06091a]/95 backdrop-blur-xl border border-purple-500/45 rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.88),0_0_32px_rgba(34,211,238,0.18)] overflow-hidden"
         >
           {/* Header */}

@@ -3,7 +3,7 @@
   window.__PLAYVAULT_MOUNTED__ = true;
 
   var CLOAK_OPTIONS = [
-    { id: 'default', label: 'Default (PlayVault)', title: 'PlayVault — Neon Arcade Hub', faviconUrl: './favicon.svg' },
+    { id: 'default', label: 'Default (NexArcade)', title: 'NexArcade — Neon Arcade Hub', faviconUrl: './favicon.svg' },
     { id: 'classroom', label: 'Google Classroom', title: 'Classes — Google Classroom', faviconUrl: 'https://ssl.gstatic.com/classroom/favicon.png' },
     { id: 'drive', label: 'Google Drive', title: 'My Drive — Google Drive', faviconUrl: 'https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png' },
     { id: 'docs', label: 'Google Docs', title: 'Untitled Document — Google Docs', faviconUrl: 'https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico' },
@@ -574,7 +574,7 @@
 
     var out = '<div style="display:flex;flex-direction:column;gap:20px">';
     out += '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px">';
-    out += '<div><div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">Dual Arcade Ranking System</div>';
+    out += '<div><div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">NexArcade Ranking System</div>';
     out += '<h1 style="font-family:&quot;Chakra Petch&quot;,sans-serif;margin:0;font-size:30px;color:#fff">' + (state.lbBoardType === 'global' ? 'Global Leaderboard' : 'Per-Game Leaderboards') + '</h1>';
     out += '<p style="margin:4px 0 0;font-size:13px;color:#94a3b8">' + (state.lbBoardType === 'global' ? 'Combined points earned across every game—play multiple titles to climb higher.' : 'Every game maintains its own separate leaderboard—pick any game to view its champions.') + '</p></div>';
     if (!state.lbConfirmReset) {
@@ -741,7 +741,7 @@
 
     var html = '<div class="pv-app">';
     html += '<header class="pv-header"><div class="pv-header-inner">';
-    html += '<div class="pv-brand" id="pv-home"><div class="pv-brand-icon">PV</div><span class="pv-brand-text">PlayVault</span></div>';
+    html += '<div class="pv-brand" id="pv-home"><div class="pv-brand-icon"><svg viewBox="0 0 32 32" fill="none" style="width:20px;height:20px"><path d="M6 23V9L14 23V9" stroke="#22d3ee" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 9L26 23M26 9L18 23" stroke="#c084fc" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:20px;font-weight:700;letter-spacing:0.03em"><span style="color:#fff">Nex</span><span class="pv-brand-text">Arcade</span></span></div>';
     html += '<nav class="pv-nav">';
     ['All', 'Action', 'Puzzle', 'Retro', 'Favorites'].forEach(function (cat) {
       var label = cat === 'All' ? 'All Games' : cat;
@@ -916,7 +916,7 @@
     }
 
     html += '</main>';
-    html += '<footer class="pv-footer"><div class="pv-footer-inner"><span><strong style="color:#67e8f9">PlayVault</strong> · Neon Arcade Portal · Instant browser arcade games</span><div style="display:flex;gap:16px"><button id="pv-foot-lb">Leaderboard</button><button id="pv-foot-random">Random Game</button><button id="pv-foot-panic">Panic Mode</button></div></div></footer>';
+    html += '<footer class="pv-footer"><div class="pv-footer-inner"><span><strong style="color:#fff">Nex</strong><strong style="color:#67e8f9">Arcade</strong> · Neon Arcade Portal · Instant browser arcade games</span><div style="display:flex;gap:16px"><button id="pv-foot-lb">Leaderboard</button><button id="pv-foot-random">Random Game</button><button id="pv-foot-panic">Panic Mode</button></div></div></footer>';
 
     // Persistent Floating Dual Leaderboard Drawer
     if (state.games.length > 0) {

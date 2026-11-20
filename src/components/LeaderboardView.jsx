@@ -143,7 +143,7 @@ export const LeaderboardView = ({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2 text-xs font-semibold text-cyan-300">
               <Trophy className="w-4 h-4 text-amber-300" />
-              <span>Dual Arcade Ranking System</span>
+              <span>NexArcade Ranking System</span>
             </div>
             <h1 className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight">
               {boardType === 'global' ? 'Global Leaderboard' : 'Per-Game Leaderboards'}
