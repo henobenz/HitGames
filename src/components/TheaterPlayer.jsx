@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { 
   Maximize2, 
   Minimize2, 
@@ -14,7 +14,12 @@ import {
   Clock
 } from 'lucide-react';
 import { extractIframeSrc } from '../utils/iframeHelper';
-import { readLiveGameScoreFromIframe } from '../utils/leaderboardStore';
+import {
+  readLiveGameScoreFromIframe,
+  readGameLocalHighScore,
+  computePerGameLeaderboard,
+  getPlayerBestForGame
+} from '../utils/leaderboardStore';
 
 function formatClock(totalSeconds) {
   const mins = Math.floor(totalSeconds / 60);
@@ -27,12 +32,12 @@ export const TheaterPlayer = ({
   isFavorite,
   sessionCount = 0,
   bestScore = null,
+  leaderboardEntries = [],
   defaultPlayerName = '',
   onToggleFavorite,
   onRemoveGame,
   onRecordPlaySeconds,
   onAutoSyncScore,
-  onSaveScore,
   onOpenLeaderboard,
   onClose,
   onSelectGame,
@@ -46,23 +51,32 @@ export const TheaterPlayer = ({
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [liveScore, setLiveScore] = useState(0);
-  const [playerName, setPlayerName] = useState(defaultPlayerName || '');
-  const [scoreValue, setScoreValue] = useState('');
-  const [scoreSaved, setScoreSaved] = useState(false);
-  const lastSyncedRef = useRef(bestScore || 0);
+
+  const activePlayerBest = useMemo(
+    () => getPlayerBestForGame(leaderboardEntries, game.id, defaultPlayerName || 'Player 1'),
+    [leaderboardEntries, game.id, defaultPlayerName]
+  );
+
+  const perGameStandings = useMemo(
+    () => computePerGameLeaderboard(leaderboardEntries, game.id),
+    [leaderboardEntries, game.id]
+  );
+
+  const lastSyncedRef = useRef(activePlayerBest);
+  const initialLocalBestRef = useRef(0);
 
   const iframeSrc = extractIframeSrc(game.iframe);
   const isExternal = /^https?:\/\//i.test(iframeSrc);
 
   useEffect(() => {
-    lastSyncedRef.current = bestScore || 0;
-  }, [game.id, bestScore]);
+    lastSyncedRef.current = activePlayerBest;
+  }, [game.id, activePlayerBest, defaultPlayerName]);
 
   useEffect(() => {
+    initialLocalBestRef.current = readGameLocalHighScore(game.id);
     setIsFrameLoading(true);
     setElapsedSeconds(0);
     setLiveScore(0);
-    setScoreSaved(false);
     const fallbackTimer = setTimeout(() => setIsFrameLoading(false), 2600);
     return () => clearTimeout(fallbackTimer);
   }, [game.id, iframeKey]);
@@ -70,14 +84,32 @@ export const TheaterPlayer = ({
   useEffect(() => {
     const syncScoreNow = () => {
       if (isExternal) return;
-      const { currentScore, bestScore: detectedBest } = readLiveGameScoreFromIframe(iframeRef.current, game.id);
+      const { currentScore, domBestScore, localStorageBest } = readLiveGameScoreFromIframe(
+        iframeRef.current,
+        game.id
+      );
+
       if (currentScore > 0) {
         setLiveScore(currentScore);
       }
-      const peak = Math.max(currentScore, detectedBest);
-      if (peak > (lastSyncedRef.current || 0) && onAutoSyncScore) {
-        lastSyncedRef.current = peak;
-        onAutoSyncScore({ gameId: game.id, score: peak });
+
+      // Attribute score fairly to active player:
+      // 1) Active run DOM #score (#score / #p1Score)
+      // 2) localStorage/DOM high score ONLY if it increased during this session OR no entries exist for this game yet
+      let earnedScore = currentScore;
+      const sessionLocalIncreased = localStorageBest > initialLocalBestRef.current;
+      const gameHasZeroEntries = perGameStandings.length === 0;
+
+      if (sessionLocalIncreased && localStorageBest > earnedScore) {
+        earnedScore = localStorageBest;
+        initialLocalBestRef.current = localStorageBest;
+      } else if (gameHasZeroEntries) {
+        earnedScore = Math.max(earnedScore, domBestScore, localStorageBest);
+      }
+
+      if (earnedScore > (lastSyncedRef.current || 0) && onAutoSyncScore) {
+        lastSyncedRef.current = earnedScore;
+        onAutoSyncScore({ gameId: game.id, score: earnedScore });
       }
     };
 
@@ -95,7 +127,7 @@ export const TheaterPlayer = ({
       syncScoreNow();
       clearInterval(interval);
     };
-  }, [game.id, isExternal, onRecordPlaySeconds, onAutoSyncScore]);
+  }, [game.id, isExternal, perGameStandings.length, onRecordPlaySeconds, onAutoSyncScore]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -128,21 +160,6 @@ export const TheaterPlayer = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
-  };
-
-  const handleScoreSubmit = (e) => {
-    e.preventDefault();
-    const numeric = Number(scoreValue);
-    if (!Number.isFinite(numeric) || numeric < 0 || !onSaveScore) return;
-    onSaveScore({
-      gameId: game.id,
-      player: playerName.trim() || 'Player 1',
-      score: numeric,
-      note: ''
-    });
-    setScoreValue('');
-    setScoreSaved(true);
-    setTimeout(() => setScoreSaved(false), 2500);
   };
 
   const relatedGames = allGames
@@ -196,7 +213,6 @@ export const TheaterPlayer = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Reload Frame */}
             <button
               onClick={handleReload}
               title="Restart game"
@@ -205,7 +221,6 @@ export const TheaterPlayer = ({
               <RotateCcw className="w-4 h-4" />
             </button>
 
-            {/* Favorite */}
             <button
               onClick={(e) => onToggleFavorite(game.id, e)}
               title={isFavorite ? "Remove from favorites" : "Favorite this game"}
@@ -218,7 +233,6 @@ export const TheaterPlayer = ({
               <Star className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
             </button>
 
-            {/* Remove custom game */}
             {game.isCustom && onRemoveGame && (
               <button
                 onClick={(e) => onRemoveGame(game.id, e)}
@@ -229,7 +243,6 @@ export const TheaterPlayer = ({
               </button>
             )}
 
-            {/* Popout Window (local games only so external games stay on-site) */}
             {!isExternal && (
               <button
                 onClick={handlePopout}
@@ -240,7 +253,6 @@ export const TheaterPlayer = ({
               </button>
             )}
 
-            {/* Share Link */}
             <button
               onClick={handleShare}
               title="Copy direct share link"
@@ -249,7 +261,6 @@ export const TheaterPlayer = ({
               {copied ? <Check className="w-4 h-4 text-cyan-400" /> : <Share2 className="w-4 h-4" />}
             </button>
 
-            {/* Fullscreen Toggle */}
             <button
               onClick={toggleFullscreen}
               title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
@@ -290,7 +301,6 @@ export const TheaterPlayer = ({
             allowFullScreen
           />
 
-          {/* Seamless PlayVault Arcade Launch Curtain */}
           {isFrameLoading && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#04050f] gap-4 p-6">
               <div className="w-40 aspect-[16/10] rounded-xl overflow-hidden border border-cyan-400/40 shadow-[0_0_24px_rgba(34,211,238,0.28)]">
@@ -314,10 +324,10 @@ export const TheaterPlayer = ({
         </div>
       </div>
 
-      {/* Game Details, Controls & Score Logger */}
+      {/* Game Details, Controls, Separate Game Leaderboard & More Games */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left 2 Cols: Details, Controls & High Score Submission */}
+        {/* Left 2 Cols */}
         <div className="lg:col-span-2 flex flex-col gap-4 bg-[#080b1f]/90 border border-purple-500/25 rounded-2xl p-5 shadow-lg">
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-purple-500/20">
             <div>
@@ -329,7 +339,7 @@ export const TheaterPlayer = ({
                 {bestScore !== null && (
                   <>
                     <span aria-hidden="true" className="text-purple-400/50">·</span>
-                    <span className="text-amber-300 font-medium">Best: {Number(bestScore).toLocaleString()}</span>
+                    <span className="text-amber-300 font-medium">Top Record: {Number(bestScore).toLocaleString()}</span>
                   </>
                 )}
               </div>
@@ -365,52 +375,55 @@ export const TheaterPlayer = ({
             </p>
           </div>
 
-          {/* Quick Score Logger */}
-          {onSaveScore && (
-            <form onSubmit={handleScoreSubmit} className="bg-[#04050f]/90 border border-purple-500/25 rounded-xl p-3.5 flex flex-col gap-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
-                  <Trophy className="w-4 h-4" />
-                  <span>Record Score to Leaderboard</span>
-                </div>
-                {onOpenLeaderboard && (
-                  <button
-                    type="button"
-                    onClick={onOpenLeaderboard}
-                    className="text-[11px] text-cyan-300 hover:text-white transition-colors cursor-pointer"
-                  >
-                    View Standings →
-                  </button>
-                )}
+          {/* Dedicated Per-Game Leaderboard Card */}
+          <div className="bg-[#04050f]/90 border border-purple-500/25 rounded-xl p-4 flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-amber-300 shrink-0" />
+                <span className="font-display text-sm font-bold text-white">
+                  {game.title} Leaderboard
+                </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
-                <input
-                  type="text"
-                  maxLength={18}
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  placeholder="Player Tag"
-                  className="sm:col-span-5 px-3 py-2 bg-[#080b1f] border border-purple-500/30 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
-                />
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  required
-                  value={scoreValue}
-                  onChange={(e) => setScoreValue(e.target.value)}
-                  placeholder="Score"
-                  className="sm:col-span-4 px-3 py-2 bg-[#080b1f] border border-purple-500/30 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 tabular-nums"
-                />
+              {onOpenLeaderboard && (
                 <button
-                  type="submit"
-                  className="sm:col-span-3 neon-btn-cyan px-3 py-2 text-xs font-bold rounded-lg cursor-pointer"
+                  type="button"
+                  onClick={() => onOpenLeaderboard('per-game', game.id)}
+                  className="text-xs font-semibold text-cyan-300 hover:text-white transition-colors cursor-pointer whitespace-nowrap"
                 >
-                  {scoreSaved ? 'Saved!' : 'Save Score'}
+                  All Leaderboards →
                 </button>
+              )}
+            </div>
+
+            {perGameStandings.length > 0 ? (
+              <div className="flex flex-col gap-1.5">
+                {perGameStandings.slice(0, 5).map((entry, idx) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-[#080b1f] border border-purple-500/15 text-xs"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className={`font-mono-code w-6 tabular-nums ${
+                        idx === 0 ? 'text-amber-300 font-bold' : idx === 1 ? 'text-cyan-300 font-bold' : 'text-slate-400'
+                      }`}>
+                        #{idx + 1}
+                      </span>
+                      <span className="font-semibold text-white truncate">{entry.player}</span>
+                    </div>
+                    <span className="font-mono-code font-bold text-amber-300 tabular-nums">
+                      {Number(entry.score).toLocaleString()}
+                    </span>
+                  </div>
+                ))}
               </div>
-            </form>
-          )}
+            ) : (
+              <p className="text-xs text-slate-400">
+                {isExternal
+                  ? 'External sandboxed game — session play time is tracked automatically.'
+                  : 'No scores recorded for this game yet. Play and earn points to claim #1!'}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Right 1 Col: More games */}

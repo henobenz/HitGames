@@ -26,6 +26,9 @@
     recentIds: [],
     playStats: {},
     leaderboardEntries: [],
+    lbBoardType: 'global',
+    lbPerGameId: '',
+    lbShowAllRuns: false,
     playerHandle: '',
     spotlightIndex: 0,
     isSpotlightPaused: false,
@@ -35,13 +38,12 @@
     copiedShare: false,
     theaterSeconds: 0,
     theaterScoreSaved: false,
-    lbFilterGame: 'all',
     lbConfirmReset: false,
-    lbSubmitted: false,
     isDrawerOpen: false,
-    drawerTab: 'top',
-    drawerSaved: false,
-    liveScore: 0
+    drawerTab: 'global',
+    drawerPerGameId: '',
+    liveScore: 0,
+    initialLocalBest: 0
   };
 
   var playTimerId = null;
@@ -218,9 +220,14 @@
     state.selectedGame = game;
     state.activeView = 'catalog';
     state.isDrawerOpen = false;
+    state.drawerPerGameId = game.id;
+    state.lbPerGameId = game.id;
     state.theaterSeconds = 0;
     state.liveScore = 0;
     state.theaterScoreSaved = false;
+    state.initialLocalBest = LOCAL_HIGH_KEYS[game.id]
+      ? parseInt(localStorage.getItem(LOCAL_HIGH_KEYS[game.id]) || '0', 10) || 0
+      : 0;
 
     state.recentIds = [game.id].concat(state.recentIds.filter(function (id) { return id !== game.id; })).slice(0, 6);
     localStorage.setItem('playvault_recent', JSON.stringify(state.recentIds));
@@ -250,15 +257,33 @@
     '2048': 'playvault_2048_best',
     stack: 'playvault_stack_high',
     flappy: 'playvault_flappy_high',
-    dino: 'playvault_dino_high'
+    dino: 'playvault_dino_high',
+    minesweeper: 'playvault_minesweeper_high',
+    wordle: 'playvault_wordle_high',
+    connect4: 'playvault_connect4_high',
+    'tic-tac-toe': 'playvault_tictactoe_high'
   };
 
+  function buildPerGameMap(entries) {
+    var map = {};
+    (entries || []).forEach(function (e) {
+      if (!e || !e.gameId) return;
+      if (!map[e.gameId]) map[e.gameId] = [];
+      map[e.gameId].push(e);
+    });
+    Object.keys(map).forEach(function (gid) {
+      map[gid].sort(function (a, b) { return b.score - a.score || b.createdAt - a.createdAt; });
+    });
+    return map;
+  }
+
   function persistLeaderboard(entries) {
-    state.leaderboardEntries = (entries || []).slice(0, 200);
+    state.leaderboardEntries = (entries || []).slice(0, 300);
     try {
       var serialized = JSON.stringify(state.leaderboardEntries);
       localStorage.setItem('playvault_global_leaderboard', serialized);
       localStorage.setItem('playvault_leaderboard', serialized);
+      localStorage.setItem('playvault_per_game_leaderboards', JSON.stringify(buildPerGameMap(state.leaderboardEntries)));
     } catch (e) {}
   }
 
@@ -267,8 +292,15 @@
     var seen = {};
     try {
       var g = JSON.parse(localStorage.getItem('playvault_global_leaderboard') || '[]');
+      var pgMap = JSON.parse(localStorage.getItem('playvault_per_game_leaderboards') || '{}');
+      var pgList = [];
+      if (pgMap && typeof pgMap === 'object') {
+        Object.keys(pgMap).forEach(function (k) {
+          if (Array.isArray(pgMap[k])) pgList = pgList.concat(pgMap[k]);
+        });
+      }
       var l = JSON.parse(localStorage.getItem('playvault_leaderboard') || '[]');
-      g.concat(l).forEach(function (item) {
+      g.concat(pgList, l).forEach(function (item) {
         if (!item || !item.gameId || isNaN(Number(item.score))) return;
         var id = item.id || (item.gameId + '-' + (item.createdAt || Date.now()));
         if (!seen[id]) {
@@ -276,10 +308,10 @@
           list.push({
             id: id,
             gameId: item.gameId,
-            player: String(item.player || 'Player 1').trim().slice(0, 18),
+            player: String(item.player || 'Player 1').trim().slice(0, 18) || 'Player 1',
             score: Number(item.score),
             note: item.note || '',
-            source: item.source || 'manual',
+            source: item.source || 'auto',
             createdAt: Number(item.createdAt) || Date.now()
           });
         }
@@ -288,12 +320,21 @@
 
     var changed = false;
     var activePlayer = (localStorage.getItem('playvault_player_name') || state.playerHandle || 'Player 1').trim().slice(0, 18) || 'Player 1';
+    var playerSlug = activePlayer.toLowerCase().replace(/[^a-z0-9]/g, '') || 'player1';
     Object.keys(LOCAL_HIGH_KEYS).forEach(function (gid) {
       var localBest = parseInt(localStorage.getItem(LOCAL_HIGH_KEYS[gid]) || '0', 10);
       if (localBest > 0) {
-        var top = list.filter(function (x) { return x.gameId === gid; }).reduce(function (m, x) { return x.score > m ? x.score : m; }, 0);
-        if (localBest > top) {
-          list.unshift({ id: 'auto-' + gid, gameId: gid, player: activePlayer, score: localBest, note: 'Auto-synced high score', source: 'auto', createdAt: Date.now() });
+        var hasAny = list.some(function (x) { return x.gameId === gid; });
+        if (!hasAny) {
+          list.unshift({
+            id: 'auto-' + gid + '-' + playerSlug,
+            gameId: gid,
+            player: activePlayer,
+            score: localBest,
+            note: 'Earned in gameplay',
+            source: 'auto',
+            createdAt: Date.now()
+          });
           changed = true;
         }
       }
@@ -302,15 +343,75 @@
     else state.leaderboardEntries = list;
   }
 
+  function computePerGameBoard(gameId) {
+    return state.leaderboardEntries
+      .filter(function (e) { return e.gameId === gameId; })
+      .slice()
+      .sort(function (a, b) { return b.score - a.score || b.createdAt - a.createdAt; });
+  }
+
+  function computeGlobalStandings() {
+    var gameTitleMap = {};
+    state.games.forEach(function (g) { gameTitleMap[g.id] = g.title; });
+    var byPlayer = {};
+    state.leaderboardEntries.forEach(function (e) {
+      if (state.games.length > 0 && !gameTitleMap[e.gameId]) return;
+      var name = String(e.player || 'Player 1').trim() || 'Player 1';
+      var key = name.toLowerCase();
+      if (!byPlayer[key]) {
+        byPlayer[key] = { player: name, bestPerGame: {}, submissions: 0 };
+      }
+      var rec = byPlayer[key];
+      rec.submissions += 1;
+      if (rec.bestPerGame[e.gameId] === undefined || e.score > rec.bestPerGame[e.gameId]) {
+        rec.bestPerGame[e.gameId] = e.score;
+      }
+    });
+    return Object.keys(byPlayer).map(function (k) {
+      var p = byPlayer[k];
+      var gids = Object.keys(p.bestPerGame);
+      var total = 0;
+      var topGameId = null;
+      var topGameScore = 0;
+      gids.forEach(function (gid) {
+        total += p.bestPerGame[gid];
+        if (p.bestPerGame[gid] > topGameScore) {
+          topGameScore = p.bestPerGame[gid];
+          topGameId = gid;
+        }
+      });
+      return {
+        player: p.player,
+        gamesScored: gids.length,
+        totalPoints: total,
+        submissions: p.submissions,
+        topGameId: topGameId,
+        topGameTitle: topGameId ? gameTitleMap[topGameId] : null,
+        topGameScore: topGameScore
+      };
+    }).sort(function (a, b) {
+      if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+      return b.gamesScored - a.gamesScored;
+    });
+  }
+
   function upsertAutoScore(gameId, scoreVal) {
     var numeric = Number(scoreVal);
     if (!gameId || isNaN(numeric) || numeric <= 0) return false;
-    var top = state.leaderboardEntries.filter(function (e) { return e.gameId === gameId; }).reduce(function (m, e) { return e.score > m ? e.score : m; }, 0);
-    if (numeric <= top) return false;
     var cleanPlayer = (localStorage.getItem('playvault_player_name') || state.playerHandle || 'Player 1').trim().slice(0, 18) || 'Player 1';
-    var autoId = 'auto-' + gameId + '-' + cleanPlayer.toLowerCase().replace(/[^a-z0-9]/g, '');
-    var filtered = state.leaderboardEntries.filter(function (e) { return e.id !== autoId && e.id !== ('auto-' + gameId); });
-    persistLeaderboard([{ id: autoId, gameId: gameId, player: cleanPlayer, score: numeric, note: 'Auto-synced high score', source: 'auto', createdAt: Date.now() }].concat(filtered));
+    var cleanLower = cleanPlayer.toLowerCase();
+    var playerBest = state.leaderboardEntries
+      .filter(function (e) { return e.gameId === gameId && String(e.player || '').trim().toLowerCase() === cleanLower; })
+      .reduce(function (m, e) { return e.score > m ? e.score : m; }, 0);
+    if (numeric <= playerBest) return false;
+    var playerSlug = cleanLower.replace(/[^a-z0-9]/g, '') || 'player';
+    var autoId = 'auto-' + gameId + '-' + playerSlug;
+    var filtered = state.leaderboardEntries.filter(function (e) {
+      return e.id !== autoId &&
+        e.id !== ('auto-' + gameId) &&
+        !(e.gameId === gameId && String(e.player || '').trim().toLowerCase() === cleanLower);
+    });
+    persistLeaderboard([{ id: autoId, gameId: gameId, player: cleanPlayer, score: numeric, note: 'Earned in gameplay', source: 'auto', createdAt: Date.now() }].concat(filtered));
     return true;
   }
 
@@ -321,7 +422,8 @@
     if (/^https?:\/\//i.test(src)) return;
 
     var current = 0;
-    var best = LOCAL_HIGH_KEYS[g.id] ? parseInt(localStorage.getItem(LOCAL_HIGH_KEYS[g.id]) || '0', 10) : 0;
+    var domBest = 0;
+    var localStorageBest = LOCAL_HIGH_KEYS[g.id] ? parseInt(localStorage.getItem(LOCAL_HIGH_KEYS[g.id]) || '0', 10) || 0 : 0;
     var frame = document.getElementById('pv-game-iframe');
     if (frame) {
       try {
@@ -338,7 +440,7 @@
             var el = doc.querySelector(sel);
             if (el) {
               var v = parseInt((el.textContent || '').replace(/[^0-9-]/g, ''), 10);
-              if (!isNaN(v) && v > best) best = v;
+              if (!isNaN(v) && v > domBest) domBest = v;
             }
           });
         }
@@ -353,8 +455,27 @@
         lsEl.style.display = 'inline';
       }
     }
-    var peak = Math.max(current, best);
-    if (peak > 0) upsertAutoScore(g.id, peak);
+
+    var earned = current;
+    var hasZeroEntries = !state.leaderboardEntries.some(function (e) { return e.gameId === g.id; });
+    if (localStorageBest > state.initialLocalBest && localStorageBest > earned) {
+      earned = localStorageBest;
+      state.initialLocalBest = localStorageBest;
+    } else if (hasZeroEntries) {
+      earned = Math.max(earned, domBest, localStorageBest);
+    }
+
+    if (earned > 0 && upsertAutoScore(g.id, earned)) {
+      var listEl = document.getElementById('pv-theater-game-lb');
+      if (listEl) {
+        var board = computePerGameBoard(g.id).slice(0, 5);
+        listEl.innerHTML = board.map(function (entry, idx) {
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:8px;background:#080b1f;border:1px solid rgba(168,85,247,0.18);font-size:12px">' +
+            '<span><strong style="color:' + (idx === 0 ? '#fcd34d' : idx === 1 ? '#67e8f9' : '#94a3b8') + ';font-family:monospace;margin-right:8px">#' + (idx + 1) + '</strong><strong style="color:#fff">' + escapeHtml(entry.player) + '</strong></span>' +
+            '<span style="font-family:monospace;font-weight:700;color:#fcd34d">' + Number(entry.score).toLocaleString() + '</span></div>';
+        }).join('');
+      }
+    }
   }
 
   function startPlayTimer() {
@@ -377,24 +498,10 @@
     }, 1000);
   }
 
-  function saveScore(gameId, player, scoreVal, note) {
-    var numeric = Number(scoreVal);
-    if (!gameId || isNaN(numeric) || numeric < 0) return false;
-    var cleanPlayer = String(player || 'Player 1').trim().slice(0, 18) || 'Player 1';
+  function updatePlayerHandle(newName) {
+    var cleanPlayer = String(newName || '').trim().slice(0, 18) || 'Player 1';
     state.playerHandle = cleanPlayer;
     localStorage.setItem('playvault_player_name', cleanPlayer);
-
-    var entry = {
-      id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
-      gameId: gameId,
-      player: cleanPlayer,
-      score: numeric,
-      note: String(note || '').trim().slice(0, 28),
-      source: 'manual',
-      createdAt: Date.now()
-    };
-    persistLeaderboard([entry].concat(state.leaderboardEntries));
-    return true;
   }
 
   function launchRandomGame() {
@@ -455,17 +562,21 @@
       .filter(function (x) { return x.sessions > 0; })
       .sort(function (a, b) { return b.sessions - a.sessions || b.totalSeconds - a.totalSeconds; });
 
-    var filteredScores = state.leaderboardEntries
-      .filter(function (e) { return state.lbFilterGame === 'all' || e.gameId === state.lbFilterGame; })
-      .sort(function (a, b) { return b.score - a.score || b.createdAt - a.createdAt; });
+    var globalStandings = computeGlobalStandings();
+    var activeGame = gamesMap[state.lbPerGameId] || state.games[0] || null;
+    var perGameBoard = activeGame ? computePerGameBoard(activeGame.id) : [];
+    var bestByGame = {};
+    state.leaderboardEntries.forEach(function (e) {
+      if (!bestByGame[e.gameId] || e.score > bestByGame[e.gameId].score) bestByGame[e.gameId] = e;
+    });
 
     var topTitle = mostPlayed.length > 0 ? mostPlayed[0].game.title : 'No plays yet';
 
     var out = '<div style="display:flex;flex-direction:column;gap:20px">';
     out += '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px">';
-    out += '<div><div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">Arcade Standings &amp; Activity</div>';
-    out += '<h1 style="font-family:&quot;Chakra Petch&quot;,sans-serif;margin:0;font-size:30px;color:#fff">PlayVault Leaderboard</h1>';
-    out += '<p style="margin:4px 0 0;font-size:13px;color:#94a3b8">Real session counts, play duration, and your recorded high scores saved locally on this device.</p></div>';
+    out += '<div><div style="font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:4px">Dual Arcade Ranking System</div>';
+    out += '<h1 style="font-family:&quot;Chakra Petch&quot;,sans-serif;margin:0;font-size:30px;color:#fff">' + (state.lbBoardType === 'global' ? 'Global Leaderboard' : 'Per-Game Leaderboards') + '</h1>';
+    out += '<p style="margin:4px 0 0;font-size:13px;color:#94a3b8">' + (state.lbBoardType === 'global' ? 'Combined points earned across every game—play multiple titles to climb higher.' : 'Every game maintains its own separate leaderboard—pick any game to view its champions.') + '</p></div>';
     if (!state.lbConfirmReset) {
       out += '<button id="pv-lb-reset-ask" class="pv-btn pv-btn-danger">Reset Records</button>';
     } else {
@@ -476,58 +587,109 @@
     }
     out += '</div>';
 
+    // 2-Type Mode Switcher
+    out += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">';
+    out += '<button data-lb-type="global" class="pv-panel" style="text-align:left;cursor:pointer;border-color:' + (state.lbBoardType === 'global' ? '#22d3ee' : 'rgba(168,85,247,0.25)') + ';background:' + (state.lbBoardType === 'global' ? 'rgba(34,211,238,0.12)' : 'rgba(8,11,31,0.9)') + '">';
+    out += '<div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:15px;font-weight:700;color:#fff">1. Global Leaderboard</div>';
+    out += '<div style="font-size:11px;color:#94a3b8;margin-top:3px">Combined points across every game (' + globalStandings.length + ' players)</div></button>';
+    out += '<button data-lb-type="per-game" class="pv-panel" style="text-align:left;cursor:pointer;border-color:' + (state.lbBoardType === 'per-game' ? '#a855f7' : 'rgba(168,85,247,0.25)') + ';background:' + (state.lbBoardType === 'per-game' ? 'rgba(168,85,247,0.16)' : 'rgba(8,11,31,0.9)') + '">';
+    out += '<div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:15px;font-weight:700;color:#fff">2. Per-Game Leaderboards</div>';
+    out += '<div style="font-size:11px;color:#94a3b8;margin-top:3px">Separate leaderboard for each of the ' + state.games.length + ' games</div></button>';
+    out += '</div>';
+
     out += '<div class="pv-stats-grid">';
     out += '<div class="pv-panel"><div style="font-size:12px;color:#94a3b8;margin-bottom:4px">Total Sessions</div><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:24px;font-weight:700;color:#67e8f9">' + totalSessions + '</div></div>';
     out += '<div class="pv-panel"><div style="font-size:12px;color:#94a3b8;margin-bottom:4px">Active Play Time</div><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:24px;font-weight:700;color:#c084fc">' + escapeHtml(formatDuration(totalSeconds)) + '</div></div>';
-    out += '<div class="pv-panel"><div style="font-size:12px;color:#94a3b8;margin-bottom:4px">Recorded High Scores</div><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:24px;font-weight:700;color:#fcd34d">' + state.leaderboardEntries.length + '</div></div>';
+    out += '<div class="pv-panel"><div style="font-size:12px;color:#94a3b8;margin-bottom:4px">Games With Records</div><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:24px;font-weight:700;color:#fcd34d">' + Object.keys(bestByGame).length + '/' + state.games.length + '</div></div>';
     out += '<div class="pv-panel"><div style="font-size:12px;color:#94a3b8;margin-bottom:4px">Most Played Game</div><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:18px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(topTitle) + '</div></div>';
     out += '</div>';
 
+    // Player Tag Form (Scores earned strictly in-game)
+    out += '<form id="pv-lb-tag-form" class="pv-panel" style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px">';
+    out += '<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:220px"><span style="font-size:12px;font-weight:700;color:#67e8f9;white-space:nowrap">Active Player Tag:</span>';
+    out += '<input id="pv-lb-player" class="pv-field" style="max-width:200px;padding:6px 10px;font-size:12px" type="text" maxlength="18" placeholder="Player 1" value="' + escapeHtml(state.playerHandle) + '">';
+    out += '<button type="submit" class="pv-btn" style="padding:6px 12px">Set Tag</button></div>';
+    out += '<span style="font-size:11px;color:#94a3b8">Scores increase automatically only as you play games and earn points.</span></form>';
+
     out += '<div class="pv-lb-grid">';
-    out += '<div style="display:flex;flex-direction:column;gap:20px">';
+    out += '<div class="pv-panel" style="padding:20px">';
 
-    // Log Score Form
-    out += '<form id="pv-lb-form" class="pv-panel">';
-    out += '<div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:16px;font-weight:700;color:#fff;margin-bottom:12px">Log a High Score</div>';
-    out += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">';
-    out += '<select id="pv-lb-game" class="pv-field">';
-    state.games.forEach(function (g) {
-      out += '<option value="' + escapeHtml(g.id) + '">' + escapeHtml(g.title) + '</option>';
-    });
-    out += '</select>';
-    out += '<input id="pv-lb-player" class="pv-field" type="text" maxlength="18" placeholder="Player name" value="' + escapeHtml(state.playerHandle) + '">';
-    out += '<input id="pv-lb-score" class="pv-field" type="number" min="0" required placeholder="Score (e.g. 2450)">';
-    out += '<input id="pv-lb-note" class="pv-field" type="text" maxlength="28" placeholder="Note (optional)">';
-    out += '</div>';
-    out += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">';
-    out += '<span style="font-size:11px;color:#94a3b8">' + (state.lbSubmitted ? '<span style="color:#6ee7b7">Score recorded to leaderboard!</span>' : 'Only real scores you submit appear here.') + '</span>';
-    out += '<button type="submit" class="pv-btn pv-btn-primary">Submit Score</button></div></form>';
+    if (state.lbBoardType === 'global') {
+      out += '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid rgba(168,85,247,0.2)">';
+      out += '<div><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:16px;font-weight:700;color:#fff">Global Combined Points Standings</div><div style="font-size:11px;color:#94a3b8">Sum of your best earned score in every game</div></div>';
+      out += '<div style="display:flex;gap:6px"><button id="pv-lb-view-global" class="pv-tab ' + (!state.lbShowAllRuns ? 'active' : '') + '">Global Ranks (' + globalStandings.length + ')</button>';
+      out += '<button id="pv-lb-view-runs" class="pv-tab ' + (state.lbShowAllRuns ? 'active' : '') + '">All Game Records (' + state.leaderboardEntries.length + ')</button></div></div>';
 
-    // High Score Table
-    out += '<div class="pv-panel" style="padding:0;overflow:hidden">';
-    out += '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid rgba(168,85,247,0.2)">';
-    out += '<span style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:16px;font-weight:700;color:#fff">High Score Standings</span>';
-    out += '<select id="pv-lb-filter" class="pv-field" style="width:auto;padding:6px 10px;font-size:12px"><option value="all">All Games</option>';
-    state.games.forEach(function (g) {
-      out += '<option value="' + escapeHtml(g.id) + '"' + (state.lbFilterGame === g.id ? ' selected' : '') + '>' + escapeHtml(g.title) + '</option>';
-    });
-    out += '</select></div>';
-
-    if (filteredScores.length === 0) {
-      out += '<div style="padding:36px 20px;text-align:center;color:#94a3b8;font-size:13px">No high scores recorded yet. Play any game and submit your score!</div>';
+      if (!state.lbShowAllRuns) {
+        if (globalStandings.length === 0) {
+          out += '<div style="padding:36px 20px;text-align:center;color:#94a3b8;font-size:13px">No global points earned yet. Play any game to start building your combined total!</div>';
+        } else {
+          out += '<div style="overflow-x:auto"><table class="pv-table"><thead><tr><th>Rank</th><th>Player</th><th style="text-align:right">Games</th><th>Top Game</th><th style="text-align:right">Global Points</th></tr></thead><tbody>';
+          globalStandings.forEach(function (p, idx) {
+            out += '<tr><td style="font-family:monospace;color:' + (idx === 0 ? '#fcd34d' : idx === 1 ? '#67e8f9' : '#94a3b8') + '">#' + (idx + 1) + '</td>';
+            out += '<td><strong style="color:#fff">' + escapeHtml(p.player) + '</strong></td>';
+            out += '<td style="text-align:right;color:#cbd5e1">' + p.gamesScored + '/' + state.games.length + '</td>';
+            out += '<td style="color:#94a3b8">' + (p.topGameTitle ? escapeHtml(p.topGameTitle) + ' (' + Number(p.topGameScore).toLocaleString() + ')' : '—') + '</td>';
+            out += '<td style="text-align:right;font-family:&quot;Chakra Petch&quot;,sans-serif;font-weight:700;color:#67e8f9">' + Number(p.totalPoints).toLocaleString() + '</td></tr>';
+          });
+          out += '</tbody></table></div>';
+        }
+      } else {
+        var allRuns = state.leaderboardEntries.slice().sort(function (a, b) { return b.score - a.score || b.createdAt - a.createdAt; });
+        if (allRuns.length === 0) {
+          out += '<div style="padding:36px 20px;text-align:center;color:#94a3b8;font-size:13px">No high scores recorded yet.</div>';
+        } else {
+          out += '<div style="overflow-x:auto"><table class="pv-table"><thead><tr><th>Rank</th><th>Player</th><th>Game</th><th style="text-align:right">Score</th><th style="text-align:right">Action</th></tr></thead><tbody>';
+          allRuns.forEach(function (entry, idx) {
+            var gm = gamesMap[entry.gameId];
+            out += '<tr><td style="font-family:monospace;color:' + (idx === 0 ? '#fcd34d' : idx === 1 ? '#67e8f9' : '#94a3b8') + '">#' + (idx + 1) + '</td>';
+            out += '<td><strong style="color:#fff">' + escapeHtml(entry.player) + '</strong></td>';
+            out += '<td><button data-select-pergame="' + escapeHtml(entry.gameId) + '" style="color:#67e8f9">' + escapeHtml(gm ? gm.title : entry.gameId) + '</button></td>';
+            out += '<td style="text-align:right;font-family:&quot;Chakra Petch&quot;,sans-serif;font-weight:700;color:#67e8f9">' + Number(entry.score).toLocaleString() + '</td>';
+            out += '<td style="text-align:right"><button data-del-score="' + escapeHtml(entry.id) + '" style="color:#94a3b8;font-size:12px" title="Remove">✕</button></td></tr>';
+          });
+          out += '</tbody></table></div>';
+        }
+      }
     } else {
-      out += '<div style="overflow-x:auto"><table class="pv-table"><thead><tr><th>Rank</th><th>Player</th><th>Game</th><th style="text-align:right">Score</th><th style="text-align:right">Action</th></tr></thead><tbody>';
-      filteredScores.forEach(function (entry, idx) {
-        var gm = gamesMap[entry.gameId];
-        out += '<tr><td style="font-family:monospace;color:' + (idx === 0 ? '#fcd34d' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#fdba74' : '#94a3b8') + '">#' + (idx + 1) + '</td>';
-        out += '<td><strong style="color:#fff">' + escapeHtml(entry.player) + '</strong>' + (entry.note ? ' <span style="font-size:11px;color:#94a3b8">· ' + escapeHtml(entry.note) + '</span>' : '') + '</td>';
-        out += '<td><button data-select-game="' + escapeHtml(entry.gameId) + '" style="color:#67e8f9">' + escapeHtml(gm ? gm.title : entry.gameId) + '</button></td>';
-        out += '<td style="text-align:right;font-family:&quot;Chakra Petch&quot;,sans-serif;font-weight:700;color:#67e8f9">' + Number(entry.score).toLocaleString() + '</td>';
-        out += '<td style="text-align:right"><button data-del-score="' + escapeHtml(entry.id) + '" style="color:#94a3b8;font-size:12px" title="Remove">✕</button></td></tr>';
+      out += '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid rgba(168,85,247,0.2)">';
+      out += '<div><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:16px;font-weight:700;color:#fff">' + escapeHtml(activeGame ? activeGame.title + ' Leaderboard' : 'Game Leaderboard') + '</div>';
+      out += '<div style="font-size:11px;color:#94a3b8">Dedicated standings for this game only</div></div>';
+      if (activeGame) {
+        out += '<div style="display:flex;gap:8px;align-items:center"><select id="pv-lb-pergame-select" class="pv-field" style="width:auto;padding:6px 10px;font-size:12px">';
+        state.games.forEach(function (gm) {
+          out += '<option value="' + escapeHtml(gm.id) + '"' + (activeGame.id === gm.id ? ' selected' : '') + '>' + escapeHtml(gm.title) + '</option>';
+        });
+        out += '</select><button data-open-game="' + escapeHtml(activeGame.id) + '" class="pv-btn pv-btn-primary">Play</button></div>';
+      }
+      out += '</div>';
+
+      if (perGameBoard.length === 0) {
+        out += '<div style="padding:32px 20px;text-align:center;color:#94a3b8;font-size:13px">No scores recorded for ' + escapeHtml(activeGame ? activeGame.title : 'this game') + ' yet. Play and gain points to claim #1!</div>';
+      } else {
+        out += '<div style="overflow-x:auto"><table class="pv-table"><thead><tr><th>Rank</th><th>Player</th><th style="text-align:right">High Score</th><th style="text-align:right">Action</th></tr></thead><tbody>';
+        perGameBoard.forEach(function (entry, idx) {
+          out += '<tr><td style="font-family:monospace;color:' + (idx === 0 ? '#fcd34d' : idx === 1 ? '#67e8f9' : '#94a3b8') + '">#' + (idx + 1) + '</td>';
+          out += '<td><strong style="color:#fff">' + escapeHtml(entry.player) + '</strong></td>';
+          out += '<td style="text-align:right;font-family:&quot;Chakra Petch&quot;,sans-serif;font-weight:700;color:#fcd34d">' + Number(entry.score).toLocaleString() + '</td>';
+          out += '<td style="text-align:right"><button data-del-score="' + escapeHtml(entry.id) + '" style="color:#94a3b8;font-size:12px" title="Remove">✕</button></td></tr>';
+        });
+        out += '</tbody></table></div>';
+      }
+
+      out += '<div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(168,85,247,0.2)">';
+      out += '<div style="font-size:12px;font-weight:700;color:#cbd5e1;margin-bottom:10px">All Separate Game Leaderboards (' + state.games.length + ')</div>';
+      out += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px">';
+      state.games.forEach(function (gm) {
+        var gb = bestByGame[gm.id];
+        var isSel = activeGame && activeGame.id === gm.id;
+        out += '<button data-select-pergame="' + escapeHtml(gm.id) + '" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:10px;border:1px solid ' + (isSel ? '#22d3ee' : 'rgba(168,85,247,0.22)') + ';background:' + (isSel ? '#0e1436' : '#050716') + ';text-align:left">';
+        out += '<span style="font-size:12px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:8px">' + escapeHtml(gm.title) + '</span>';
+        out += '<span style="font-family:monospace;font-size:11px;font-weight:700;color:' + (gb ? '#fcd34d' : '#64748b') + '">' + (gb ? Number(gb.score).toLocaleString() : 'Empty') + '</span></button>';
       });
-      out += '</tbody></table></div>';
+      out += '</div></div>';
     }
-    out += '</div></div>';
+    out += '</div>';
 
     // Most Played Sidebar
     out += '<div class="pv-panel"><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:16px;font-weight:700;color:#fff;margin-bottom:14px">Your Most Played</div>';
@@ -644,15 +806,23 @@
       html += '<p style="color:#cbd5e1;font-size:14px;line-height:1.6">' + escapeHtml(g.description) + '</p>';
       html += '<div style="background:#04050f;border:1px solid rgba(34,211,238,0.25);border-radius:10px;padding:12px;margin-top:14px"><div style="font-size:11px;font-weight:700;color:#67e8f9;text-transform:uppercase;margin-bottom:4px">Controls (Keyboard, Mouse &amp; Touch)</div><div style="font-size:12px;color:#e2e8f0;font-family:monospace">' + escapeHtml(g.controls) + '</div></div></div>';
 
-      // Quick Record Score in Theater
-      html += '<form id="pv-theater-score-form" class="pv-panel">';
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><strong style="font-size:14px;color:#fff">Record Score to Leaderboard</strong>';
-      html += '<button type="button" id="pv-theater-open-lb" style="font-size:12px;color:#67e8f9">View Standings →</button></div>';
-      html += '<div style="display:flex;flex-wrap:wrap;gap:10px">';
-      html += '<input id="pv-th-player" class="pv-field" style="flex:1;min-width:130px" type="text" maxlength="18" placeholder="Player name" value="' + escapeHtml(state.playerHandle) + '">';
-      html += '<input id="pv-th-score" class="pv-field" style="flex:1;min-width:130px" type="number" min="0" required placeholder="Your score">';
-      html += '<button type="submit" class="pv-btn pv-btn-primary">' + (state.theaterScoreSaved ? 'Saved!' : 'Save Score') + '</button></div></form>';
-      html += '</div>';
+      // Dedicated Per-Game Leaderboard Card inside Theater
+      var thBoard = computePerGameBoard(g.id);
+      html += '<div class="pv-panel" style="display:flex;flex-direction:column;gap:10px">';
+      html += '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px">';
+      html += '<strong style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:14px;color:#fff">' + escapeHtml(g.title) + ' Leaderboard</strong>';
+      html += '<button type="button" id="pv-theater-open-lb" style="font-size:12px;color:#67e8f9;font-weight:600">All Leaderboards →</button></div>';
+      html += '<div id="pv-theater-game-lb" style="display:flex;flex-direction:column;gap:6px">';
+      if (thBoard.length > 0) {
+        thBoard.slice(0, 5).forEach(function (entry, idx) {
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:8px;background:#080b1f;border:1px solid rgba(168,85,247,0.18);font-size:12px">' +
+            '<span><strong style="color:' + (idx === 0 ? '#fcd34d' : idx === 1 ? '#67e8f9' : '#94a3b8') + ';font-family:monospace;margin-right:8px">#' + (idx + 1) + '</strong><strong style="color:#fff">' + escapeHtml(entry.player) + '</strong></span>' +
+            '<span style="font-family:monospace;font-weight:700;color:#fcd34d">' + Number(entry.score).toLocaleString() + '</span></div>';
+        });
+      } else {
+        html += '<div style="font-size:12px;color:#94a3b8">' + (isExternal ? 'External sandboxed game — session play time is tracked automatically.' : 'No scores recorded for this game yet. Play and earn points to claim #1!') + '</div>';
+      }
+      html += '</div></div></div>';
 
       html += '<div class="pv-panel"><div style="font-size:12px;font-weight:700;color:#67e8f9;text-transform:uppercase;margin-bottom:10px">More to Play</div>';
       state.games.filter(function (x) { return x.id !== g.id; }).slice(0, 4).forEach(function (rel) {
@@ -748,44 +918,63 @@
     html += '</main>';
     html += '<footer class="pv-footer"><div class="pv-footer-inner"><span><strong style="color:#67e8f9">PlayVault</strong> · Neon Arcade Portal · Instant browser arcade games</span><div style="display:flex;gap:16px"><button id="pv-foot-lb">Leaderboard</button><button id="pv-foot-random">Random Game</button><button id="pv-foot-panic">Panic Mode</button></div></div></footer>';
 
-    // Persistent Floating Global Leaderboard Drawer
+    // Persistent Floating Dual Leaderboard Drawer
     if (state.games.length > 0) {
-      var topRecord = state.leaderboardEntries.reduce(function (m, e) { return !m || e.score > m.score ? e : m; }, null);
+      var drGlobalStandings = computeGlobalStandings();
+      var drTopGlobal = drGlobalStandings[0] ? drGlobalStandings[0].totalPoints : state.leaderboardEntries.length;
       var drawerGamesMap = {};
       state.games.forEach(function (gm) { drawerGamesMap[gm.id] = gm; });
+      var drActiveGame = drawerGamesMap[state.drawerPerGameId] || state.selectedGame || state.games[0];
+      var drPerGameBoard = drActiveGame ? computePerGameBoard(drActiveGame.id) : [];
+
       html += '<div class="pv-drawer-wrap">';
       if (state.isDrawerOpen) {
         html += '<aside class="pv-drawer">';
         html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#0a0f29;border-bottom:1px solid rgba(168,85,247,0.25)">';
-        html += '<div><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:14px;font-weight:700;color:#fff">Global Leaderboard</div><div style="font-size:11px;color:#94a3b8">' + state.leaderboardEntries.length + ' saved records across all games</div></div>';
+        html += '<div><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:14px;font-weight:700;color:#fff">Leaderboards</div><div style="font-size:11px;color:#94a3b8">Global Combined + ' + state.games.length + ' Game Boards</div></div>';
         html += '<div style="display:flex;gap:6px"><button id="pv-dr-full" class="pv-btn" style="padding:4px 8px;font-size:11px">Full View ↗</button><button id="pv-dr-close" style="color:#94a3b8;font-size:14px;padding:2px 6px">✕</button></div></div>';
-        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:8px;background:#040612;border-bottom:1px solid rgba(168,85,247,0.2)">';
-        html += '<button data-dr-tab="top" class="pv-tab ' + (state.drawerTab === 'top' ? 'active' : '') + '">Top Scores</button>';
-        html += '<button data-dr-tab="games" class="pv-tab ' + (state.drawerTab === 'games' ? 'active' : '') + '">All Games</button></div>';
-        html += '<form id="pv-dr-form" style="padding:10px 12px;background:#080c22;border-bottom:1px solid rgba(168,85,247,0.2);display:flex;flex-direction:column;gap:8px">';
-        html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr;gap:6px">';
-        html += '<input id="pv-dr-player" class="pv-field" style="padding:6px 8px;font-size:12px" type="text" maxlength="18" placeholder="Tag" value="' + escapeHtml(state.playerHandle) + '">';
-        html += '<select id="pv-dr-game" class="pv-field" style="padding:6px 8px;font-size:12px">';
-        state.games.forEach(function (gm) {
-          var sel = state.selectedGame && state.selectedGame.id === gm.id ? ' selected' : '';
-          html += '<option value="' + escapeHtml(gm.id) + '"' + sel + '>' + escapeHtml(gm.title) + '</option>';
-        });
-        html += '</select>';
-        html += '<input id="pv-dr-score" class="pv-field" style="padding:6px 8px;font-size:12px" type="number" min="0" required placeholder="Score"></div>';
-        html += '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:' + (state.drawerSaved ? '#6ee7b7' : '#94a3b8') + '">' + (state.drawerSaved ? 'Saved to localStorage!' : 'Local games auto-sync') + '</span>';
-        html += '<button type="submit" class="pv-btn pv-btn-primary" style="padding:4px 10px;font-size:11px">+ Log Score</button></div></form>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:8px;background:#040612;border-bottom:1px solid rgba(168,85,247,0.2)">';
+        html += '<button data-dr-tab="global" class="pv-tab ' + (state.drawerTab === 'global' ? 'active' : '') + '">Global</button>';
+        html += '<button data-dr-tab="per-game" class="pv-tab ' + (state.drawerTab === 'per-game' ? 'active' : '') + '">Per Game</button>';
+        html += '<button data-dr-tab="runs" class="pv-tab ' + (state.drawerTab === 'runs' ? 'active' : '') + '">Top Runs</button></div>';
+        html += '<form id="pv-dr-tag-form" style="padding:10px 12px;background:#080c22;border-bottom:1px solid rgba(168,85,247,0.2);display:flex;justify-content:space-between;align-items:center;gap:8px">';
+        html += '<input id="pv-dr-player" class="pv-field" style="flex:1;padding:6px 8px;font-size:12px" type="text" maxlength="18" placeholder="Player Tag (Player 1)" value="' + escapeHtml(state.playerHandle) + '">';
+        html += '<span style="font-size:11px;color:#67e8f9;white-space:nowrap">Earned in-game only</span></form>';
         html += '<div class="pv-drawer-body">';
-        if (state.drawerTab === 'games') {
+        if (state.drawerTab === 'global') {
+          if (drGlobalStandings.length === 0) {
+            html += '<div style="padding:24px;text-align:center;font-size:12px;color:#94a3b8">Play games to earn points—your scores across all games combine here!</div>';
+          } else {
+            drGlobalStandings.forEach(function (p, idx) {
+              html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:10px;background:#090d24;border:1px solid rgba(168,85,247,0.2)">';
+              html += '<div style="min-width:0"><div style="font-size:12px;font-weight:700;color:#fff"><span style="color:#67e8f9;font-family:monospace;margin-right:6px">#' + (idx + 1) + '</span>' + escapeHtml(p.player) + '</div>';
+              html += '<div style="font-size:11px;color:#94a3b8">' + p.gamesScored + (p.gamesScored === 1 ? ' game' : ' games') + (p.topGameTitle ? ' · Best: ' + escapeHtml(p.topGameTitle) : '') + '</div></div>';
+              html += '<span style="font-family:monospace;font-size:12px;font-weight:700;color:#67e8f9">' + Number(p.totalPoints).toLocaleString() + '</span></div>';
+            });
+          }
+        } else if (state.drawerTab === 'per-game') {
+          html += '<div style="display:flex;gap:6px;margin-bottom:4px"><select id="pv-dr-pergame-select" class="pv-field" style="flex:1;padding:6px 8px;font-size:12px">';
           state.games.forEach(function (gm) {
-            var gb = bestByGame[gm.id];
-            html += '<div data-select-game="' + escapeHtml(gm.id) + '" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:10px;background:#090d24;border:1px solid rgba(168,85,247,0.2);cursor:pointer">';
-            html += '<span style="font-size:12px;font-weight:700;color:#fff">' + escapeHtml(gm.title) + '</span>';
-            html += '<span style="font-family:monospace;font-size:12px;font-weight:700;color:' + (gb > 0 ? '#fcd34d' : '#64748b') + '">' + (gb > 0 ? Number(gb).toLocaleString() : 'Play →') + '</span></div>';
+            html += '<option value="' + escapeHtml(gm.id) + '"' + (drActiveGame && drActiveGame.id === gm.id ? ' selected' : '') + '>' + escapeHtml(gm.title) + '</option>';
           });
+          html += '</select>';
+          if (drActiveGame) {
+            html += '<button data-open-game="' + escapeHtml(drActiveGame.id) + '" class="pv-btn pv-btn-primary" style="padding:6px 10px">Play</button>';
+          }
+          html += '</div>';
+          if (drPerGameBoard.length === 0) {
+            html += '<div style="padding:20px;text-align:center;font-size:12px;color:#94a3b8">No scores yet on ' + escapeHtml(drActiveGame ? drActiveGame.title : 'this game') + ' leaderboard.</div>';
+          } else {
+            drPerGameBoard.forEach(function (entry, idx) {
+              html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:10px;background:#090d24;border:1px solid rgba(168,85,247,0.2)">';
+              html += '<div style="font-size:12px;font-weight:700;color:#fff"><span style="color:' + (idx === 0 ? '#fcd34d' : '#67e8f9') + ';font-family:monospace;margin-right:6px">#' + (idx + 1) + '</span>' + escapeHtml(entry.player) + '</div>';
+              html += '<span style="font-family:monospace;font-size:12px;font-weight:700;color:#fcd34d">' + Number(entry.score).toLocaleString() + '</span></div>';
+            });
+          }
         } else {
           var ranked = state.leaderboardEntries.slice().sort(function (a, b) { return b.score - a.score; }).slice(0, 20);
           if (ranked.length === 0) {
-            html += '<div style="padding:24px;text-align:center;font-size:12px;color:#94a3b8">No scores yet. Play a game or log one above!</div>';
+            html += '<div style="padding:24px;text-align:center;font-size:12px;color:#94a3b8">No scores yet. Play a game to start earning points!</div>';
           } else {
             ranked.forEach(function (entry, idx) {
               var gm = drawerGamesMap[entry.gameId];
@@ -798,7 +987,7 @@
         }
         html += '</div></aside>';
       }
-      html += '<button id="pv-dr-toggle" class="pv-btn pv-btn-purple" style="padding:10px 14px;font-size:12px;box-shadow:0 12px 30px rgba(0,0,0,0.75),0 0 20px rgba(168,85,247,0.45)">Global Leaderboard · ' + (topRecord ? Number(topRecord.score).toLocaleString() : state.leaderboardEntries.length) + '</button>';
+      html += '<button id="pv-dr-toggle" class="pv-btn pv-btn-purple" style="padding:10px 14px;font-size:12px;box-shadow:0 12px 30px rgba(0,0,0,0.75),0 0 20px rgba(168,85,247,0.45)">Leaderboards · ' + Number(drTopGlobal).toLocaleString() + '</button>';
       html += '</div>';
     }
 
@@ -996,40 +1185,44 @@
     };
 
     var thOpenLb = document.getElementById('pv-theater-open-lb');
-    if (thOpenLb) thOpenLb.onclick = function () { stopPlayTimer(); state.selectedGame = null; state.activeView = 'leaderboard'; render(); };
+    if (thOpenLb) thOpenLb.onclick = function () {
+      var curId = state.selectedGame ? state.selectedGame.id : '';
+      stopPlayTimer();
+      state.selectedGame = null;
+      state.lbBoardType = 'per-game';
+      if (curId) state.lbPerGameId = curId;
+      state.activeView = 'leaderboard';
+      render();
+    };
 
-    var thForm = document.getElementById('pv-theater-score-form');
-    if (thForm && state.selectedGame) {
-      thForm.onsubmit = function (e) {
+    document.querySelectorAll('[data-lb-type]').forEach(function (btn) {
+      btn.onclick = function () { state.lbBoardType = btn.getAttribute('data-lb-type'); render(); };
+    });
+
+    var viewGlobalBtn = document.getElementById('pv-lb-view-global');
+    if (viewGlobalBtn) viewGlobalBtn.onclick = function () { state.lbShowAllRuns = false; render(); };
+    var viewRunsBtn = document.getElementById('pv-lb-view-runs');
+    if (viewRunsBtn) viewRunsBtn.onclick = function () { state.lbShowAllRuns = true; render(); };
+
+    var lbPerGameSel = document.getElementById('pv-lb-pergame-select');
+    if (lbPerGameSel) lbPerGameSel.onchange = function (e) { state.lbPerGameId = e.target.value; render(); };
+
+    document.querySelectorAll('[data-select-pergame]').forEach(function (btn) {
+      btn.onclick = function () {
+        state.lbBoardType = 'per-game';
+        state.lbPerGameId = btn.getAttribute('data-select-pergame');
+        render();
+      };
+    });
+
+    var lbTagForm = document.getElementById('pv-lb-tag-form');
+    if (lbTagForm) {
+      lbTagForm.onsubmit = function (e) {
         e.preventDefault();
-        var p = document.getElementById('pv-th-player').value;
-        var s = document.getElementById('pv-th-score').value;
-        if (saveScore(state.selectedGame.id, p, s, '')) {
-          state.theaterScoreSaved = true;
-          render();
-          setTimeout(function () { state.theaterScoreSaved = false; render(); }, 2000);
-        }
+        updatePlayerHandle(document.getElementById('pv-lb-player').value);
+        render();
       };
     }
-
-    var lbForm = document.getElementById('pv-lb-form');
-    if (lbForm) {
-      lbForm.onsubmit = function (e) {
-        e.preventDefault();
-        var gId = document.getElementById('pv-lb-game').value;
-        var p = document.getElementById('pv-lb-player').value;
-        var s = document.getElementById('pv-lb-score').value;
-        var n = document.getElementById('pv-lb-note').value;
-        if (saveScore(gId, p, s, n)) {
-          state.lbSubmitted = true;
-          render();
-          setTimeout(function () { state.lbSubmitted = false; render(); }, 2200);
-        }
-      };
-    }
-
-    var lbFilter = document.getElementById('pv-lb-filter');
-    if (lbFilter) lbFilter.onchange = function (e) { state.lbFilterGame = e.target.value; render(); };
 
     document.querySelectorAll('[data-del-score]').forEach(function (btn) {
       btn.onclick = function () {
@@ -1052,7 +1245,11 @@
       localStorage.removeItem('playvault_stats');
       localStorage.removeItem('playvault_recent');
       localStorage.removeItem('playvault_global_leaderboard');
+      localStorage.removeItem('playvault_per_game_leaderboards');
       localStorage.removeItem('playvault_leaderboard');
+      Object.keys(LOCAL_HIGH_KEYS).forEach(function (k) {
+        try { localStorage.removeItem(LOCAL_HIGH_KEYS[k]); } catch (err) {}
+      });
       render();
     };
 
@@ -1061,23 +1258,28 @@
     var drClose = document.getElementById('pv-dr-close');
     if (drClose) drClose.onclick = function () { state.isDrawerOpen = false; render(); };
     var drFull = document.getElementById('pv-dr-full');
-    if (drFull) drFull.onclick = function () { stopPlayTimer(); state.isDrawerOpen = false; state.selectedGame = null; state.activeView = 'leaderboard'; render(); };
+    if (drFull) drFull.onclick = function () {
+      stopPlayTimer();
+      state.isDrawerOpen = false;
+      state.selectedGame = null;
+      state.lbBoardType = state.drawerTab === 'per-game' ? 'per-game' : 'global';
+      if (state.drawerPerGameId) state.lbPerGameId = state.drawerPerGameId;
+      state.activeView = 'leaderboard';
+      render();
+    };
     document.querySelectorAll('[data-dr-tab]').forEach(function (btn) {
       btn.onclick = function () { state.drawerTab = btn.getAttribute('data-dr-tab'); render(); };
     });
-    var drForm = document.getElementById('pv-dr-form');
-    if (drForm) {
-      drForm.onsubmit = function (e) {
+    var drPerGameSel = document.getElementById('pv-dr-pergame-select');
+    if (drPerGameSel) drPerGameSel.onchange = function (e) { state.drawerPerGameId = e.target.value; render(); };
+    var drTagForm = document.getElementById('pv-dr-tag-form');
+    if (drTagForm) {
+      drTagForm.onsubmit = function (e) {
         e.preventDefault();
-        var p = document.getElementById('pv-dr-player').value;
-        var g = document.getElementById('pv-dr-game').value;
-        var s = document.getElementById('pv-dr-score').value;
-        if (saveScore(g, p, s, '')) {
-          state.drawerSaved = true;
-          render();
-          setTimeout(function () { state.drawerSaved = false; render(); }, 1800);
-        }
+        updatePlayerHandle(document.getElementById('pv-dr-player').value);
       };
+      var drPlayer = document.getElementById('pv-dr-player');
+      if (drPlayer) drPlayer.onblur = function (e) { updatePlayerHandle(e.target.value); };
     }
   }
 

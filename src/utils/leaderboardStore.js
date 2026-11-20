@@ -1,4 +1,5 @@
 export const GLOBAL_LEADERBOARD_KEY = 'playvault_global_leaderboard';
+export const PER_GAME_LEADERBOARDS_KEY = 'playvault_per_game_leaderboards';
 export const LEGACY_LEADERBOARD_KEY = 'playvault_leaderboard';
 
 export const GAME_LOCAL_SCORE_KEYS = {
@@ -7,8 +8,22 @@ export const GAME_LOCAL_SCORE_KEYS = {
   '2048': ['playvault_2048_best'],
   stack: ['playvault_stack_high'],
   flappy: ['playvault_flappy_high'],
-  dino: ['playvault_dino_high']
+  dino: ['playvault_dino_high'],
+  minesweeper: ['playvault_minesweeper_high'],
+  wordle: ['playvault_wordle_high'],
+  connect4: ['playvault_connect4_high'],
+  'tic-tac-toe': ['playvault_tictactoe_high']
 };
+
+export function clearAllGameLocalHighScores() {
+  Object.values(GAME_LOCAL_SCORE_KEYS).forEach((keys) => {
+    keys.forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {}
+    });
+  });
+}
 
 export function readGameLocalHighScore(gameId) {
   const keys = GAME_LOCAL_SCORE_KEYS[gameId];
@@ -25,16 +40,47 @@ export function readGameLocalHighScore(gameId) {
   return best;
 }
 
+export function buildPerGameMap(entries) {
+  const map = {};
+  (entries || []).forEach((e) => {
+    if (!e || !e.gameId) return;
+    if (!map[e.gameId]) map[e.gameId] = [];
+    map[e.gameId].push(e);
+  });
+  Object.keys(map).forEach((gid) => {
+    map[gid].sort((a, b) => b.score - a.score || b.createdAt - a.createdAt);
+  });
+  return map;
+}
+
+export function saveGlobalLeaderboard(entries) {
+  const safeList = (entries || []).slice(0, 300);
+  try {
+    const serialized = JSON.stringify(safeList);
+    localStorage.setItem(GLOBAL_LEADERBOARD_KEY, serialized);
+    localStorage.setItem(LEGACY_LEADERBOARD_KEY, serialized);
+    localStorage.setItem(PER_GAME_LEADERBOARDS_KEY, JSON.stringify(buildPerGameMap(safeList)));
+  } catch (e) {}
+  return safeList;
+}
+
 export function loadGlobalLeaderboard(defaultPlayer = 'Player 1') {
   let entries = [];
   try {
     const rawGlobal = localStorage.getItem(GLOBAL_LEADERBOARD_KEY);
+    const rawPerGame = localStorage.getItem(PER_GAME_LEADERBOARDS_KEY);
     const rawLegacy = localStorage.getItem(LEGACY_LEADERBOARD_KEY);
+
     const parsedGlobal = rawGlobal ? JSON.parse(rawGlobal) : [];
+    const parsedPerGameMap = rawPerGame ? JSON.parse(rawPerGame) : {};
+    const parsedPerGameList =
+      parsedPerGameMap && typeof parsedPerGameMap === 'object'
+        ? Object.values(parsedPerGameMap).flat()
+        : [];
     const parsedLegacy = rawLegacy ? JSON.parse(rawLegacy) : [];
 
     const seenIds = new Set();
-    [...parsedGlobal, ...parsedLegacy].forEach((item) => {
+    [...parsedGlobal, ...parsedPerGameList, ...parsedLegacy].forEach((item) => {
       if (!item || !item.gameId || !Number.isFinite(Number(item.score))) return;
       const id = item.id || `${item.gameId}-${item.createdAt || Date.now()}`;
       if (!seenIds.has(id)) {
@@ -42,10 +88,10 @@ export function loadGlobalLeaderboard(defaultPlayer = 'Player 1') {
         entries.push({
           id,
           gameId: item.gameId,
-          player: (item.player || 'Player 1').trim().slice(0, 18),
+          player: (item.player || 'Player 1').trim().slice(0, 18) || 'Player 1',
           score: Number(item.score),
           note: item.note || '',
-          source: item.source || 'manual',
+          source: item.source || 'auto',
           createdAt: Number(item.createdAt) || Date.now()
         });
       }
@@ -54,23 +100,22 @@ export function loadGlobalLeaderboard(defaultPlayer = 'Player 1') {
     entries = [];
   }
 
-  // Merge any higher scores stored directly by individual local HTML5 games
+  // Seed initial local high score only if that game has zero records yet
   const cleanPlayer = (defaultPlayer || 'Player 1').trim().slice(0, 18) || 'Player 1';
+  const playerSlug = cleanPlayer.toLowerCase().replace(/[^a-z0-9]/g, '') || 'player1';
   let changed = false;
+
   Object.keys(GAME_LOCAL_SCORE_KEYS).forEach((gameId) => {
     const localBest = readGameLocalHighScore(gameId);
     if (localBest > 0) {
-      const currentTop = entries
-        .filter((e) => e.gameId === gameId)
-        .reduce((max, e) => (e.score > max ? e.score : max), 0);
-
-      if (localBest > currentTop) {
+      const hasAnyForGame = entries.some((e) => e.gameId === gameId);
+      if (!hasAnyForGame) {
         entries.unshift({
-          id: `auto-${gameId}`,
+          id: `auto-${gameId}-${playerSlug}`,
           gameId,
           player: cleanPlayer,
           score: localBest,
-          note: 'Auto-synced high score',
+          note: 'Earned in gameplay',
           source: 'auto',
           createdAt: Date.now()
         });
@@ -86,14 +131,11 @@ export function loadGlobalLeaderboard(defaultPlayer = 'Player 1') {
   return entries;
 }
 
-export function saveGlobalLeaderboard(entries) {
-  const safeList = (entries || []).slice(0, 200);
-  try {
-    const serialized = JSON.stringify(safeList);
-    localStorage.setItem(GLOBAL_LEADERBOARD_KEY, serialized);
-    localStorage.setItem(LEGACY_LEADERBOARD_KEY, serialized);
-  } catch (e) {}
-  return safeList;
+export function getPlayerBestForGame(entries, gameId, player) {
+  const cleanLower = ((player || 'Player 1').trim().slice(0, 18) || 'Player 1').toLowerCase();
+  return (entries || [])
+    .filter((e) => e.gameId === gameId && (e.player || '').trim().toLowerCase() === cleanLower)
+    .reduce((max, e) => (e.score > max ? e.score : max), 0);
 }
 
 export function upsertAutoGameScore(entries, { gameId, player, score }) {
@@ -101,43 +143,50 @@ export function upsertAutoGameScore(entries, { gameId, player, score }) {
   if (!gameId || !Number.isFinite(numericScore) || numericScore <= 0) return entries;
 
   const cleanPlayer = (player || 'Player 1').trim().slice(0, 18) || 'Player 1';
-  const currentGameBest = entries
-    .filter((e) => e.gameId === gameId)
-    .reduce((max, e) => (e.score > max ? e.score : max), 0);
+  const playerSlug = cleanPlayer.toLowerCase().replace(/[^a-z0-9]/g, '') || 'player';
+  const playerCurrentBest = getPlayerBestForGame(entries, gameId, cleanPlayer);
 
-  if (numericScore <= currentGameBest) {
+  if (numericScore <= playerCurrentBest) {
     return entries;
   }
 
-  const autoId = `auto-${gameId}-${cleanPlayer.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-  const withoutOldAuto = entries.filter((e) => e.id !== autoId && e.id !== `auto-${gameId}`);
+  const autoId = `auto-${gameId}-${playerSlug}`;
+  const cleanLower = cleanPlayer.toLowerCase();
+  const withoutOldPlayerAuto = (entries || []).filter(
+    (e) =>
+      e.id !== autoId &&
+      e.id !== `auto-${gameId}` &&
+      !(e.gameId === gameId && (e.player || '').trim().toLowerCase() === cleanLower)
+  );
+
   const next = [
     {
       id: autoId,
       gameId,
       player: cleanPlayer,
       score: numericScore,
-      note: 'Auto-synced high score',
+      note: 'Earned in gameplay',
       source: 'auto',
       createdAt: Date.now()
     },
-    ...withoutOldAuto
-  ].slice(0, 200);
+    ...withoutOldPlayerAuto
+  ].slice(0, 300);
 
   return saveGlobalLeaderboard(next);
 }
 
 export function readLiveGameScoreFromIframe(iframeEl, gameId) {
   let currentScore = 0;
-  let bestScore = readGameLocalHighScore(gameId);
+  let domBestScore = 0;
+  const localStorageBest = readGameLocalHighScore(gameId);
 
   if (!iframeEl) {
-    return { currentScore, bestScore };
+    return { currentScore, domBestScore, localStorageBest };
   }
 
   try {
     const doc = iframeEl.contentDocument || iframeEl.contentWindow?.document;
-    if (!doc) return { currentScore, bestScore };
+    if (!doc) return { currentScore, domBestScore, localStorageBest };
 
     const scoreSelectors = ['#score', '#p1Score'];
     for (const sel of scoreSelectors) {
@@ -155,20 +204,16 @@ export function readLiveGameScoreFromIframe(iframeEl, gameId) {
       const el = doc.querySelector(sel);
       if (el) {
         const parsed = parseInt((el.textContent || '').replace(/[^0-9-]/g, ''), 10);
-        if (Number.isFinite(parsed) && parsed > bestScore) {
-          bestScore = parsed;
+        if (Number.isFinite(parsed) && parsed > domBestScore) {
+          domBestScore = parsed;
         }
       }
     }
-
-    if (currentScore > bestScore) {
-      bestScore = currentScore;
-    }
   } catch (e) {
-    // Cross-origin external games cannot be inspected directly; rely on manual submission
+    // Cross-origin external games cannot be inspected directly
   }
 
-  return { currentScore, bestScore };
+  return { currentScore, domBestScore, localStorageBest };
 }
 
 export function computeBestScoreByGame(entries) {
@@ -181,8 +226,21 @@ export function computeBestScoreByGame(entries) {
   return map;
 }
 
+export function computePerGameLeaderboard(entries, gameId) {
+  if (!gameId) return [];
+  return (entries || [])
+    .filter((e) => e.gameId === gameId)
+    .slice()
+    .sort((a, b) => b.score - a.score || b.createdAt - a.createdAt);
+}
+
 export function computeGlobalPlayerStandings(entries, games) {
   const validGameIds = new Set((games || []).map((g) => g.id));
+  const gameTitleMap = {};
+  (games || []).forEach((g) => {
+    gameTitleMap[g.id] = g.title;
+  });
+
   const byPlayer = {};
 
   (entries || []).forEach((e) => {
@@ -209,12 +267,24 @@ export function computeGlobalPlayerStandings(entries, games) {
     .map((p) => {
       const gameIds = Object.keys(p.bestPerGame);
       const totalPoints = gameIds.reduce((sum, gid) => sum + p.bestPerGame[gid], 0);
+      let topGameId = null;
+      let topGameScore = 0;
+      gameIds.forEach((gid) => {
+        if (p.bestPerGame[gid] > topGameScore) {
+          topGameScore = p.bestPerGame[gid];
+          topGameId = gid;
+        }
+      });
       return {
         player: p.player,
         gamesScored: gameIds.length,
         totalPoints,
         submissions: p.submissions,
-        lastActive: p.lastActive
+        lastActive: p.lastActive,
+        bestPerGame: p.bestPerGame,
+        topGameId,
+        topGameTitle: topGameId ? gameTitleMap[topGameId] || topGameId : null,
+        topGameScore
       };
     })
     .sort((a, b) => {

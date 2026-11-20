@@ -149,6 +149,7 @@
     let currentRow = 0;
     let currentCol = 0;
     let gameOver = false;
+    let wordleScore = 0;
     let guesses = Array.from({ length: 6 }, () => Array(5).fill(''));
 
     const boardEl = document.getElementById('board');
@@ -289,7 +290,13 @@
 
       if (guess === secretWord) {
         gameOver = true;
-        showMessage(`Splendid! Solved in ${currentRow + 1} guesses!`, '#10b981');
+        const gained = (6 - currentRow) * 100;
+        wordleScore += gained;
+        const best = parseInt(localStorage.getItem('playvault_wordle_high') || '0', 10);
+        if (wordleScore > best) {
+          localStorage.setItem('playvault_wordle_high', String(wordleScore));
+        }
+        showMessage(`Splendid! Solved in ${currentRow + 1} guesses (+${gained} pts)!`, '#10b981');
         return;
       }
 
@@ -298,6 +305,7 @@
 
       if (currentRow === 6) {
         gameOver = true;
+        wordleScore = 0;
         showMessage(`Game Over! The word was: ${secretWord}`, '#ef4444');
       }
     }

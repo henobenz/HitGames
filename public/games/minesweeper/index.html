@@ -315,6 +315,11 @@
 
       cell.classList.add('revealed');
       revealedCount++;
+      const livePts = revealedCount * 10;
+      const bestSoFar = parseInt(localStorage.getItem('playvault_minesweeper_high') || '0', 10);
+      if (livePts > bestSoFar) {
+        localStorage.setItem('playvault_minesweeper_high', String(livePts));
+      }
       const val = board[r][c];
 
       if (val > 0) {
@@ -359,6 +364,11 @@
         const c = gridEl.children[mr * COLS + mc];
         c.textContent = '🚩';
       });
+      const finalScore = (ROWS * COLS - MINES) * 10 + Math.max(100, 1000 - timer * 5);
+      const best = parseInt(localStorage.getItem('playvault_minesweeper_high') || '0', 10);
+      if (finalScore > best) {
+        localStorage.setItem('playvault_minesweeper_high', String(finalScore));
+      }
     }
 
     faceBtn.addEventListener('click', init);

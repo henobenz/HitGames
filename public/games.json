@@ -190,5 +190,17 @@
     "featured": false,
     "tags": ["Strategy", "Connect", "Board", "Versus"],
     "accentColor": "#3b82f6"
+  },
+  {
+    "id": "tic-tac-toe",
+    "title": "Neon Tic-Tac-Toe",
+    "category": "Strategy",
+    "description": "Outsmart the tactical AI or challenge a rival in 2-player local mode. Chain victories together to build massive win-streak high scores.",
+    "controls": "Tap / Click any square, or press keys 1-9 to place mark · R for Next Round",
+    "thumbnail": "./thumbnails/tic-tac-toe.svg",
+    "iframe": "<iframe src=\"./games/tic-tac-toe/index.html\" title=\"Neon Tic-Tac-Toe\" allow=\"fullscreen; autoplay; gamepad\" allowfullscreen></iframe>",
+    "featured": true,
+    "tags": ["Strategy", "Board", "Classic", "Versus"],
+    "accentColor": "#22d3ee"
   }
 ]

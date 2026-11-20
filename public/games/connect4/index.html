@@ -121,6 +121,7 @@
     let currentPlayer = 1;
     let isVsAi = true;
     let gameOver = false;
+    let sessionScore = 0;
 
     const gridEl = document.getElementById('grid');
     const statusEl = document.getElementById('status');
@@ -283,6 +284,15 @@
 
     function endGame(msg) {
       gameOver = true;
+      if (msg.indexOf('Red Wins') === 0) {
+        sessionScore += isVsAi ? 150 : 100;
+        const best = parseInt(localStorage.getItem('playvault_connect4_high') || '0', 10);
+        if (sessionScore > best) {
+          localStorage.setItem('playvault_connect4_high', String(sessionScore));
+        }
+      } else if (msg.indexOf('AI') !== -1) {
+        sessionScore = 0;
+      }
       statusEl.textContent = msg;
       statusEl.style.color = '#10b981';
     }

@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Neon Tic-Tac-Toe</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    html, body {
+      height: 100%;
+      overscroll-behavior: none;
+    }
+    body {
+      background: radial-gradient(circle at 20% 10%, rgba(168, 85, 247, 0.16), transparent 45%),
+                  radial-gradient(circle at 80% 90%, rgba(34, 211, 238, 0.14), transparent 45%),
+                  #04050f;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      padding: 10px;
+      touch-action: manipulation;
+    }
+    .shell {
+      width: min(440px, 96vw);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+    .score-bar {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .stat-box {
+      background: rgba(9, 13, 36, 0.92);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      border-radius: 10px;
+      padding: 8px 10px;
+      text-align: center;
+    }
+    .stat-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 2px;
+    }
+    .stat-val {
+      font-size: clamp(16px, 4vw, 20px);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: #22d3ee;
+    }
+    .stat-val.best { color: #fcd34d; }
+    .stat-val.streak { color: #c084fc; }
+
+    .hud {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: rgba(9, 13, 36, 0.94);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      border-radius: 12px;
+      flex-wrap: wrap;
+    }
+    .status-text {
+      font-size: clamp(12px, 3.2vw, 14px);
+      font-weight: 700;
+      color: #67e8f9;
+    }
+    .controls-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .btn {
+      background: rgba(17, 24, 58, 0.95);
+      color: #e2e8f0;
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.15s ease;
+      touch-action: manipulation;
+    }
+    .btn:hover {
+      border-color: #22d3ee;
+      color: #fff;
+    }
+    .btn.primary {
+      background: linear-gradient(135deg, #22d3ee, #38bdf8);
+      color: #04050f;
+      border-color: transparent;
+    }
+    .btn.primary:hover {
+      filter: brightness(1.08);
+    }
+
+    .board-frame {
+      background: rgba(9, 13, 36, 0.95);
+      border: 2px solid rgba(99, 102, 241, 0.5);
+      border-radius: 16px;
+      padding: clamp(10px, 2.5vw, 16px);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7), 0 0 28px rgba(34, 211, 238, 0.16);
+    }
+    .grid {
+      --cell: clamp(78px, 23vw, 106px);
+      display: grid;
+      grid-template-columns: repeat(3, var(--cell));
+      grid-template-rows: repeat(3, var(--cell));
+      gap: clamp(8px, 2vw, 12px);
+    }
+    .cell {
+      background: #04050f;
+      border: 1.5px solid rgba(168, 85, 247, 0.35);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cell:hover:not(.taken):not(.locked) {
+      border-color: rgba(34, 211, 238, 0.8);
+      background: #0b102c;
+      transform: translateY(-2px);
+      box-shadow: 0 0 16px rgba(34, 211, 238, 0.25);
+    }
+    .cell.win {
+      border-color: #fcd34d;
+      background: rgba(252, 211, 77, 0.12);
+      box-shadow: 0 0 22px rgba(252, 211, 77, 0.4);
+    }
+    .mark {
+      font-size: clamp(38px, 10vw, 52px);
+      font-weight: 900;
+      line-height: 1;
+      animation: popIn 0.16s ease-out;
+    }
+    .mark-x {
+      color: #22d3ee;
+      text-shadow: 0 0 16px rgba(34, 211, 238, 0.75);
+    }
+    .mark-o {
+      color: #c084fc;
+      text-shadow: 0 0 16px rgba(168, 85, 247, 0.75);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.5); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .footer-meta {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #94a3b8;
+      padding: 0 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="score-bar">
+      <div class="stat-box">
+        <div class="stat-label">Score</div>
+        <div id="score" class="stat-val">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Best</div>
+        <div id="highScore" class="stat-val best">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Win Streak</div>
+        <div id="streakVal" class="stat-val streak">0</div>
+      </div>
+    </div>
+
+    <div class="hud">
+      <div id="status" class="status-text">Your Turn (X)</div>
+      <div class="controls-row">
+        <button id="modeBtn" class="btn" type="button">VS AI</button>
+        <button id="diffBtn" class="btn" type="button">Smart AI</button>
+        <button id="resetBtn" class="btn primary" type="button">Next Round</button>
+      </div>
+    </div>
+
+    <div class="board-frame">
+      <div id="grid" class="grid"></div>
+    </div>
+
+    <div class="footer-meta">
+      <span id="recordSummary">W: 0 · D: 0 · L: 0</span>
+      <span>Keys 1–9 · R for Next Round</span>
+    </div>
+  </div>
+
+  <script>
+    const WIN_LINES = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6]
+    ];
+
+    const HIGH_KEY = 'playvault_tictactoe_high';
+
+    let board = Array(9).fill('');
+    let currentTurn = 'X';
+    let isVsAi = true;
+    let smartAi = true;
+    let roundOver = false;
+    let score = 0;
+    let highScore = parseInt(localStorage.getItem(HIGH_KEY) || '0', 10) || 0;
+    let streak = 0;
+    let stats = { w: 0, d: 0, l: 0 };
+
+    const gridEl = document.getElementById('grid');
+    const statusEl = document.getElementById('status');
+    const scoreEl = document.getElementById('score');
+    const highScoreEl = document.getElementById('highScore');
+    const streakEl = document.getElementById('streakVal');
+    const recordSummaryEl = document.getElementById('recordSummary');
+    const modeBtn = document.getElementById('modeBtn');
+    const diffBtn = document.getElementById('diffBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function updateHudStats() {
+      scoreEl.textContent = String(score);
+      highScoreEl.textContent = String(highScore);
+      streakEl.textContent = String(streak);
+      recordSummaryEl.textContent = `W: ${stats.w} · D: ${stats.d} · L: ${stats.l}`;
+    }
+
+    function saveHighIfNeeded() {
+      if (score > highScore) {
+        highScore = score;
+        try {
+          localStorage.setItem(HIGH_KEY, String(highScore));
+        } catch (e) {}
+      }
+    }
+
+    function renderBoard(winLine = null) {
+      gridEl.innerHTML = '';
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'cell' +
+          (board[i] ? ' taken' : '') +
+          (roundOver || (isVsAi && currentTurn === 'O') ? ' locked' : '') +
+          (winLine && winLine.includes(i) ? ' win' : '');
+        cell.setAttribute('aria-label', `Square ${i + 1}`);
+        if (board[i]) {
+          const span = document.createElement('span');
+          span.className = `mark mark-${board[i].toLowerCase()}`;
+          span.textContent = board[i];
+          cell.appendChild(span);
+        }
+        cell.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          handleCellClick(i);
+        });
+        gridEl.appendChild(cell);
+      }
+    }
+
+    function findWinner(b) {
+      for (const line of WIN_LINES) {
+        const [a, c, d] = line;
+        if (b[a] && b[a] === b[c] && b[a] === b[d]) {
+          return { winner: b[a], line };
+        }
+      }
+      if (b.every(Boolean)) return { winner: 'DRAW', line: null };
+      return null;
+    }
+
+    function handleCellClick(idx) {
+      if (roundOver || board[idx]) return;
+      if (isVsAi && currentTurn === 'O') return;
+
+      board[idx] = currentTurn;
+      const outcome = findWinner(board);
+      if (outcome) {
+        finishRound(outcome);
+        return;
+      }
+
+      currentTurn = currentTurn === 'X' ? 'O' : 'X';
+      updateTurnStatus();
+      renderBoard();
+
+      if (isVsAi && currentTurn === 'O' && !roundOver) {
+        setTimeout(makeAiMove, 240);
+      }
+    }
+
+    function updateTurnStatus() {
+      if (currentTurn === 'X') {
+        statusEl.textContent = isVsAi ? 'Your Turn (X)' : 'Player 1 Turn (X)';
+        statusEl.style.color = '#22d3ee';
+      } else {
+        statusEl.textContent = isVsAi ? 'AI Thinking...' : 'Player 2 Turn (O)';
+        statusEl.style.color = '#c084fc';
+      }
+    }
+
+    function minimax(b, isMax, depth) {
+      const res = findWinner(b);
+      if (res) {
+        if (res.winner === 'O') return 10 - depth;
+        if (res.winner === 'X') return depth - 10;
+        return 0;
+      }
+      let best = isMax ? -Infinity : Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (!b[i]) {
+          b[i] = isMax ? 'O' : 'X';
+          const val = minimax(b, !isMax, depth + 1);
+          b[i] = '';
+          best = isMax ? Math.max(best, val) : Math.min(best, val);
+        }
+      }
+      return best;
+    }
+
+    function pickBestMove() {
+      const empty = [];
+      for (let i = 0; i < 9; i++) {
+        if (!board[i]) empty.push(i);
+      }
+      if (!empty.length) return -1;
+
+      // Always take immediate winning move or block immediate loss
+      for (const i of empty) {
+        board[i] = 'O';
+        if (findWinner(board)?.winner === 'O') { board[i] = ''; return i; }
+        board[i] = '';
+      }
+      for (const i of empty) {
+        board[i] = 'X';
+        if (findWinner(board)?.winner === 'X') { board[i] = ''; return i; }
+        board[i] = '';
+      }
+
+      if (!smartAi && Math.random() < 0.45) {
+        return empty[Math.floor(Math.random() * empty.length)];
+      }
+
+      // Smart AI: minimax with slight first-turn center/corner variety
+      if (empty.length === 8 && !board[4]) return 4;
+      let bestScore = -Infinity;
+      let bestMove = empty[0];
+      for (const i of empty) {
+        board[i] = 'O';
+        const val = minimax(board, false, 0);
+        board[i] = '';
+        if (val > bestScore) {
+          bestScore = val;
+          bestMove = i;
+        }
+      }
+      return bestMove;
+    }
+
+    function makeAiMove() {
+      if (roundOver) return;
+      const move = pickBestMove();
+      if (move === -1) return;
+      board[move] = 'O';
+      const outcome = findWinner(board);
+      if (outcome) {
+        finishRound(outcome);
+        return;
+      }
+      currentTurn = 'X';
+      updateTurnStatus();
+      renderBoard();
+    }
+
+    function finishRound(outcome) {
+      roundOver = true;
+      if (outcome.winner === 'X') {
+        streak += 1;
+        stats.w += 1;
+        const pts = isVsAi ? (smartAi ? 150 : 100) + (streak - 1) * 50 : 75;
+        score += pts;
+        saveHighIfNeeded();
+        statusEl.textContent = isVsAi ? `You Win! +${pts} pts` : `Player 1 (X) Wins! +${pts} pts`;
+        statusEl.style.color = '#10b981';
+      } else if (outcome.winner === 'O') {
+        stats.l += 1;
+        if (isVsAi) {
+          streak = 0;
+          score = 0;
+          statusEl.textContent = 'AI Wins — Streak Reset!';
+          statusEl.style.color = '#f43f5e';
+        } else {
+          statusEl.textContent = 'Player 2 (O) Wins!';
+          statusEl.style.color = '#c084fc';
+        }
+      } else {
+        stats.d += 1;
+        if (isVsAi) {
+          const pts = smartAi ? 35 : 20;
+          score += pts;
+          saveHighIfNeeded();
+          statusEl.textContent = `Draw! +${pts} pts`;
+        } else {
+          statusEl.textContent = 'Draw Round!';
+        }
+        statusEl.style.color = '#fcd34d';
+      }
+
+      updateHudStats();
+      renderBoard(outcome.line);
+    }
+
+    function nextRound() {
+      board = Array(9).fill('');
+      currentTurn = 'X';
+      roundOver = false;
+      updateTurnStatus();
+      renderBoard();
+    }
+
+    modeBtn.addEventListener('click', () => {
+      isVsAi = !isVsAi;
+      modeBtn.textContent = isVsAi ? 'VS AI' : '2P Local';
+      diffBtn.style.display = isVsAi ? 'inline-block' : 'none';
+      streak = 0;
+      score = 0;
+      updateHudStats();
+      nextRound();
+    });
+
+    diffBtn.addEventListener('click', () => {
+      smartAi = !smartAi;
+      diffBtn.textContent = smartAi ? 'Smart AI' : 'Classic AI';
+      nextRound();
+    });
+
+    resetBtn.addEventListener('click', nextRound);
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key >= '1' && e.key <= '9') {
+        handleCellClick(parseInt(e.key, 10) - 1);
+      } else if (e.key === 'r' || e.key === 'R') {
+        nextRound();
+      }
+    });
+
+    updateHudStats();
+    updateTurnStatus();
+    renderBoard();
+  </script>
+</body>
+</html>

@@ -20,7 +20,9 @@ import { LeaderboardView } from './components/LeaderboardView';
 import { PersistentLeaderboardDrawer } from './components/PersistentLeaderboardDrawer';
 import {
   GLOBAL_LEADERBOARD_KEY,
+  PER_GAME_LEADERBOARDS_KEY,
   LEGACY_LEADERBOARD_KEY,
+  clearAllGameLocalHighScores,
   loadGlobalLeaderboard,
   saveGlobalLeaderboard,
   upsertAutoGameScore
@@ -40,6 +42,8 @@ export default function App() {
   const [recentIds, setRecentIds] = useState([]);
   const [playStats, setPlayStats] = useState({});
   const [leaderboardEntries, setLeaderboardEntries] = useState([]);
+  const [leaderboardMode, setLeaderboardMode] = useState('global');
+  const [leaderboardGameId, setLeaderboardGameId] = useState(null);
   const [playerHandle, setPlayerHandle] = useState('');
   const [spotlightIndex, setSpotlightIndex] = useState(0);
   const [isSpotlightPaused, setIsSpotlightPaused] = useState(false);
@@ -233,22 +237,10 @@ export default function App() {
     });
   }, []);
 
-  const handleSaveScore = useCallback(({ gameId, player, score, note }) => {
-    const cleanPlayer = (player || 'Player 1').trim().slice(0, 18);
+  const handleUpdatePlayerName = useCallback((newName) => {
+    const cleanPlayer = (newName || '').trim().slice(0, 18) || 'Player 1';
     setPlayerHandle(cleanPlayer);
     localStorage.setItem('playvault_player_name', cleanPlayer);
-
-    const entry = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      gameId,
-      player: cleanPlayer,
-      score: Number(score),
-      note: note || '',
-      source: 'manual',
-      createdAt: Date.now()
-    };
-
-    setLeaderboardEntries(prev => saveGlobalLeaderboard([entry, ...prev]));
   }, []);
 
   const handleAutoSyncScore = useCallback(({ gameId, score }) => {
@@ -267,7 +259,9 @@ export default function App() {
     localStorage.removeItem('playvault_stats');
     localStorage.removeItem('playvault_recent');
     localStorage.removeItem(GLOBAL_LEADERBOARD_KEY);
+    localStorage.removeItem(PER_GAME_LEADERBOARDS_KEY);
     localStorage.removeItem(LEGACY_LEADERBOARD_KEY);
+    clearAllGameLocalHighScores();
   }, []);
 
   const handleToggleFavorite = (id, e) => {
@@ -404,14 +398,16 @@ export default function App() {
             isFavorite={favorites.includes(selectedGame.id)}
             sessionCount={playStats[selectedGame.id]?.sessions || 0}
             bestScore={bestScoreByGame[selectedGame.id] ?? null}
+            leaderboardEntries={leaderboardEntries}
             defaultPlayerName={playerHandle}
             onToggleFavorite={handleToggleFavorite}
             onRemoveGame={handleRemoveGame}
             onRecordPlaySeconds={handleRecordPlaySeconds}
             onAutoSyncScore={handleAutoSyncScore}
-            onSaveScore={handleSaveScore}
-            onOpenLeaderboard={() => {
+            onOpenLeaderboard={(mode = 'global', gameId = null) => {
               setSelectedGame(null);
+              setLeaderboardMode(mode);
+              if (gameId) setLeaderboardGameId(gameId);
               setActiveView('leaderboard');
             }}
             onClose={() => {
@@ -429,7 +425,9 @@ export default function App() {
             playStats={playStats}
             leaderboardEntries={leaderboardEntries}
             defaultPlayerName={playerHandle}
-            onSaveScore={handleSaveScore}
+            initialBoardType={leaderboardMode}
+            initialGameId={leaderboardGameId}
+            onUpdatePlayerName={handleUpdatePlayerName}
             onDeleteScore={handleDeleteScore}
             onResetStats={handleResetStats}
             onSelectGame={handleSelectGame}
@@ -806,18 +804,20 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Persistent Global Leaderboard Drawer (accessible on catalog & in-game) */}
+      {/* Persistent Dual Leaderboard Drawer (accessible on catalog & in-game) */}
       {!isPanicOpen && games.length > 0 && (
         <PersistentLeaderboardDrawer
           games={games}
           leaderboardEntries={leaderboardEntries}
-          activeGame={selectedGame}
           defaultPlayerName={playerHandle}
-          onSaveScore={handleSaveScore}
+          activeGameId={selectedGame?.id || null}
+          onUpdatePlayerName={handleUpdatePlayerName}
           onDeleteScore={handleDeleteScore}
           onSelectGame={handleSelectGame}
-          onOpenFullLeaderboard={() => {
+          onOpenFullLeaderboard={(mode = 'global', gameId = null) => {
             setSelectedGame(null);
+            setLeaderboardMode(mode);
+            if (gameId) setLeaderboardGameId(gameId);
             setActiveView('leaderboard');
           }}
         />
