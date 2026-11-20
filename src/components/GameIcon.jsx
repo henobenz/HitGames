@@ -200,6 +200,25 @@ export const GameIcon = ({
             <circle cx="86" cy="74" r="7" fill="#22d3ee" />
           </g>
         );
+      case 'eggy-car':
+        return (
+          <g>
+            <path d="M10 86 Q 45 64 75 78 T 110 72" stroke="#a855f7" strokeWidth="2.5" fill="none" />
+            <ellipse cx="58" cy="40" rx="8" ry="11" fill="#fef08a" stroke="#f59e0b" strokeWidth="1.5" />
+            <path d="M32 62 L40 50 H72 L86 58 V68 H30 Z" fill="#22d3ee" />
+            <circle cx="42" cy="70" r="7" fill="#050716" stroke="#c084fc" strokeWidth="2.5" />
+            <circle cx="74" cy="70" r="7" fill="#050716" stroke="#c084fc" strokeWidth="2.5" />
+          </g>
+        );
+      case 'algebra-run-wave':
+        return (
+          <g>
+            <polygon points="46,16 58,16 52,42" fill="#f43f5e" />
+            <polygon points="80,94 94,94 87,64" fill="#f43f5e" />
+            <polyline points="14,76 34,54 54,72 78,44" stroke="#a855f7" strokeWidth="3" fill="none" />
+            <polygon points="90,44 74,36 78,44 74,52" fill="#22d3ee" stroke="#fff" strokeWidth="1.5" />
+          </g>
+        );
       default:
         return (
           <g>

@@ -1,5 +1,33 @@
 [
   {
+    "id": "eggy-car",
+    "title": "Eggy Car",
+    "category": "Casual",
+    "description": "Drive across rolling hills while balancing a fragile egg on your roof. Collect coins, unlock new rides, and feather the throttle so the egg never drops.",
+    "controls": "Touch Left/Right pedals or Arrow Keys / A & D to accelerate and brake",
+    "thumbnail": "./thumbnails/eggy-car.svg",
+    "iframe": "<iframe id=\"game\" title=\"Eggy Car\" src=\"https://www.hoodamath.com/mobile/games/eggy-car/game.html?nocheckorient=1\" scrolling=\"no\" allow=\"autoplay; fullscreen; gamepad\" allowfullscreen style=\"width:100%;height:100%;margin:0;border:0;padding:0;\"></iframe>",
+    "rating": 4.92,
+    "playedCount": 64500,
+    "featured": true,
+    "tags": ["Driving", "Physics", "Balancing", "Popular"],
+    "accentColor": "#22d3ee"
+  },
+  {
+    "id": "algebra-run-wave",
+    "title": "Algebra Run Wave",
+    "category": "Action",
+    "description": "Pilot a neon wave glider through razor-sharp geometric tunnels and solve quick algebra challenges to keep your high-speed run alive.",
+    "controls": "Hold Click, Tap screen, or Space / Up Arrow to rise · Release to dive",
+    "thumbnail": "./thumbnails/algebra-run-wave.svg",
+    "iframe": "<iframe id=\"game\" title=\"Algebra Run Wave\" src=\"https://www.hoodamath.com/mobile/games/algebra-run-wave/game.html?nocheckorient=1\" scrolling=\"no\" allow=\"autoplay; fullscreen; gamepad\" allowfullscreen style=\"width:100%;height:100%;margin:0;border:0;padding:0;\"></iframe>",
+    "rating": 4.89,
+    "playedCount": 41200,
+    "featured": true,
+    "tags": ["Wave", "Timing", "Math", "Arcade"],
+    "accentColor": "#a855f7"
+  },
+  {
     "id": "snake",
     "title": "Retro Snake",
     "category": "Retro",

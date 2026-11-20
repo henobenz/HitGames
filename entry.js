@@ -99,8 +99,10 @@
       '.pv-theater{display:flex;flex-direction:column;gap:20px}',
       '.pv-player-box{background:#04050f;border:1px solid rgba(168,85,247,0.35);border-radius:16px;overflow:hidden;box-shadow:0 24px 48px rgba(0,0,0,0.7),0 0 28px rgba(34,211,238,0.14)}',
       '.pv-player-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#090c22;border-bottom:1px solid rgba(168,85,247,0.25)}',
-      '.pv-player-frame{width:100%;height:min(78vh,580px);background:#04050f}',
+      '.pv-player-frame{position:relative;width:100%;height:min(78vh,580px);background:#04050f;overflow:hidden}',
       '.pv-player-frame iframe{width:100%;height:100%;border:none}',
+      '.pv-curtain{position:absolute;inset:0;z-index:10;background:#04050f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;transition:opacity .3s}',
+      '.pv-curtain img{width:160px;aspect-ratio:16/10;object-fit:cover;border-radius:12px;border:1px solid rgba(34,211,238,0.4);box-shadow:0 0 24px rgba(34,211,238,0.28)}',
       '.pv-details-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}',
       '@media(max-width:900px){.pv-details-grid,.pv-hero{grid-template-columns:1fr}.pv-nav{display:none}}',
       '.pv-panel{background:rgba(8,11,31,0.9);border:1px solid rgba(168,85,247,0.25);border-radius:16px;padding:20px}',
@@ -251,6 +253,7 @@
     if (state.selectedGame) {
       var g = state.selectedGame;
       var iframeSrc = extractIframeSrc(g.iframe);
+      var isExternal = /^https?:\/\//i.test(iframeSrc);
       var isFav = state.favorites.indexOf(g.id) !== -1;
       html += '<div class="pv-theater">';
       html += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#94a3b8">';
@@ -263,18 +266,22 @@
       html += '<div style="display:flex;gap:8px;align-items:center">';
       html += '<button id="pv-reload-btn" class="pv-btn">Restart</button>';
       html += '<button id="pv-theater-fav" class="pv-btn">' + (isFav ? '★ Favorited' : '☆ Favorite') + '</button>';
-      html += '<button id="pv-popout-btn" class="pv-btn">Popout</button>';
+      if (!isExternal) {
+        html += '<button id="pv-popout-btn" class="pv-btn">Popout</button>';
+      }
       html += '<button id="pv-share-btn" class="pv-btn">' + (state.copiedShare ? 'Copied!' : 'Share') + '</button>';
       html += '<button id="pv-fullscreen-btn" class="pv-btn pv-btn-purple">Fullscreen</button>';
       html += '</div></div>';
-      html += '<div class="pv-player-frame"><iframe id="pv-game-iframe" src="' + escapeHtml(iframeSrc) + '" title="' + escapeHtml(g.title) + '" allow="fullscreen; autoplay; gamepad" allowfullscreen></iframe></div>';
-      html += '</div>';
+      var selectedThumb = resolveAssetUrl(g.thumbnail, './thumbnails/' + g.id + '.svg');
+      var sandboxAttr = isExternal ? ' sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"' : '';
+      html += '<div class="pv-player-frame"><iframe id="pv-game-iframe" src="' + escapeHtml(iframeSrc) + '" title="' + escapeHtml(g.title) + '" scrolling="no" referrerpolicy="no-referrer"' + sandboxAttr + ' allow="fullscreen; autoplay; gamepad" allowfullscreen></iframe>';
+      html += '<div id="pv-launch-curtain" class="pv-curtain"><img src="' + escapeHtml(selectedThumb) + '" alt="' + escapeHtml(g.title) + '" referrerpolicy="no-referrer"><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-weight:700;color:#fff;font-size:16px">' + escapeHtml(g.title) + '</div></div>';
+      html += '</div></div>';
 
       html += '<div class="pv-details-grid">';
       html += '<div class="pv-panel"><h2 style="margin:0 0 8px;color:#fff;font-size:20px">' + escapeHtml(g.title) + '</h2>';
       html += '<p style="color:#cbd5e1;font-size:14px;line-height:1.6">' + escapeHtml(g.description) + '</p>';
       html += '<div style="background:#04050f;border:1px solid rgba(34,211,238,0.25);border-radius:10px;padding:12px;margin-top:14px"><div style="font-size:11px;font-weight:700;color:#67e8f9;text-transform:uppercase;margin-bottom:4px">Controls (Keyboard, Mouse &amp; Touch)</div><div style="font-size:12px;color:#e2e8f0;font-family:monospace">' + escapeHtml(g.controls) + '</div></div>';
-      html += '<div style="margin-top:12px;font-size:11px;color:#94a3b8;word-break:break-all"><strong>Iframe:</strong> <code style="color:#67e8f9">' + escapeHtml(g.iframe) + '</code></div>';
       html += '</div>';
 
       html += '<div class="pv-panel"><div style="font-size:12px;font-weight:700;color:#67e8f9;text-transform:uppercase;margin-bottom:10px">More to Play</div>';
@@ -318,6 +325,9 @@
           html += '<div class="pv-card" data-open-game="' + escapeHtml(game.id) + '">';
           html += '<div class="pv-card-thumb">';
           html += '<img src="' + escapeHtml(thumbUrl) + '" alt="' + escapeHtml(game.title) + ' thumbnail" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'">';
+          if (game.isCustom) {
+            html += '<button class="pv-fav-btn" style="left:10px;right:auto;border-color:rgba(244,63,94,0.45);color:#fda4af" data-remove-id="' + escapeHtml(game.id) + '" title="Remove custom game">✕</button>';
+          }
           html += '<button class="pv-fav-btn ' + (fav ? 'active' : '') + '" data-fav-id="' + escapeHtml(game.id) + '" title="Favorite">' + (fav ? '★' : '☆') + '</button>';
           html += '</div>';
           html += '<div class="pv-card-body">';
@@ -424,6 +434,20 @@
       render();
     };
 
+    document.querySelectorAll('[data-remove-id]').forEach(function (btn) {
+      btn.onclick = function (e) {
+        e.stopPropagation();
+        var id = btn.getAttribute('data-remove-id');
+        state.games = state.games.filter(function (g) { return g.id !== id; });
+        if (state.selectedGame && state.selectedGame.id === id) state.selectedGame = null;
+        try {
+          var stored = JSON.parse(localStorage.getItem('playvault_custom_games') || '[]');
+          localStorage.setItem('playvault_custom_games', JSON.stringify(stored.filter(function (g) { return g.id !== id; })));
+        } catch (err) {}
+        render();
+      };
+    });
+
     document.querySelectorAll('[data-fav-id]').forEach(function (btn) {
       btn.onclick = function (e) {
         e.stopPropagation();
@@ -447,10 +471,26 @@
     var backBtn = document.getElementById('pv-back-btn');
     if (backBtn) backBtn.onclick = function () { state.selectedGame = null; render(); };
 
+    var gameFrame = document.getElementById('pv-game-iframe');
+    var launchCurtain = document.getElementById('pv-launch-curtain');
+    if (gameFrame && launchCurtain) {
+      var hideCurtain = function () {
+        launchCurtain.style.opacity = '0';
+        setTimeout(function () {
+          if (launchCurtain && launchCurtain.parentNode) launchCurtain.style.display = 'none';
+        }, 280);
+      };
+      gameFrame.onload = hideCurtain;
+      setTimeout(hideCurtain, 2600);
+    }
+
     var reloadBtn = document.getElementById('pv-reload-btn');
     if (reloadBtn) reloadBtn.onclick = function () {
       var frame = document.getElementById('pv-game-iframe');
-      if (frame) frame.src = frame.src;
+      if (frame) {
+        if (launchCurtain) { launchCurtain.style.display = 'flex'; launchCurtain.style.opacity = '1'; }
+        frame.src = frame.src;
+      }
     };
 
     var fsBtn = document.getElementById('pv-fullscreen-btn');
@@ -573,7 +613,15 @@
       }
       var list = res.ok ? await res.json() : [];
       var custom = [];
-      try { custom = JSON.parse(localStorage.getItem('playvault_custom_games') || '[]'); } catch (e) {}
+      try {
+        var rawCustom = JSON.parse(localStorage.getItem('playvault_custom_games') || '[]');
+        custom = rawCustom.filter(function (g) {
+          return !/8[\s-]*ball[\s-]*pool/i.test((g.id || '') + ' ' + (g.title || ''));
+        });
+        if (custom.length !== rawCustom.length) {
+          localStorage.setItem('playvault_custom_games', JSON.stringify(custom));
+        }
+      } catch (e) {}
       var ids = new Set(list.map(function (g) { return g.id; }));
       state.games = custom.filter(function (g) { return !ids.has(g.id); }).concat(list);
 

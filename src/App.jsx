@@ -47,8 +47,14 @@ export default function App() {
         if (storedCustom) {
           try {
             const parsedCustom = JSON.parse(storedCustom);
+            const cleanedCustom = parsedCustom.filter(
+              g => !/8[\s-]*ball[\s-]*pool/i.test(`${g.id || ''} ${g.title || ''}`)
+            );
+            if (cleanedCustom.length !== parsedCustom.length) {
+              localStorage.setItem('playvault_custom_games', JSON.stringify(cleanedCustom));
+            }
             const initialIds = new Set(initialGames.map(g => g.id));
-            const uniqueCustom = parsedCustom.filter(g => !initialIds.has(g.id));
+            const uniqueCustom = cleanedCustom.filter(g => !initialIds.has(g.id));
             initialGames = [...uniqueCustom, ...initialGames];
           } catch (e) {}
         }
@@ -144,6 +150,22 @@ export default function App() {
     localStorage.setItem('playvault_custom_games', JSON.stringify(customOnly));
   };
 
+  const handleRemoveGame = (id, e) => {
+    if (e) e.stopPropagation();
+    setGames(prev => prev.filter(g => g.id !== id));
+    setSelectedGame(prev => (prev && prev.id === id ? null : prev));
+    const storedCustom = localStorage.getItem('playvault_custom_games');
+    if (storedCustom) {
+      try {
+        const parsed = JSON.parse(storedCustom);
+        localStorage.setItem(
+          'playvault_custom_games',
+          JSON.stringify(parsed.filter(g => g.id !== id))
+        );
+      } catch (err) {}
+    }
+  };
+
   const filteredGames = useMemo(() => {
     return games
       .filter(game => {
@@ -217,6 +239,7 @@ export default function App() {
             game={selectedGame}
             isFavorite={favorites.includes(selectedGame.id)}
             onToggleFavorite={handleToggleFavorite}
+            onRemoveGame={handleRemoveGame}
             onClose={() => {
               setSelectedGame(null);
               const url = new URL(window.location.href);
@@ -396,6 +419,7 @@ export default function App() {
                     game={game}
                     isFavorite={favorites.includes(game.id)}
                     onToggleFavorite={handleToggleFavorite}
+                    onRemoveGame={handleRemoveGame}
                     onSelectGame={(g) => setSelectedGame(g)}
                   />
                 ))}

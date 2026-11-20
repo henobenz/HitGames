@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" fill="none">
+  <defs>
+    <radialGradient id="g1" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.28" />
+      <stop offset="100%" stop-color="#04050f" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="g2" cx="75%" cy="65%" r="60%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#04050f" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="hill" x1="0" y1="130" x2="320" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#090d24" />
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+  </defs>
+  <rect width="320" height="200" fill="#050716" />
+  <rect width="320" height="200" fill="url(#g1)" />
+  <rect width="320" height="200" fill="url(#g2)" />
+  <path d="M0 156 Q 75 112 155 142 T 320 128 L 320 200 L 0 200 Z" fill="url(#hill)" />
+  <path d="M0 156 Q 75 112 155 142 T 320 128" stroke="#a855f7" stroke-width="3.5" fill="none" filter="url(#glow)" />
+  <g filter="url(#glow)">
+    <g transform="translate(108, 78) rotate(-8 52 38)">
+      <ellipse cx="52" cy="14" rx="13" ry="17" fill="#fef08a" stroke="#f59e0b" stroke-width="2" />
+      <ellipse cx="48" cy="10" rx="4" ry="6" fill="#ffffff" opacity="0.65" />
+      <path d="M16 42 L30 24 H72 L92 38 V52 H12 V42 Z" fill="#22d3ee" stroke="#a5f3fc" stroke-width="2" />
+      <rect x="34" y="28" width="32" height="11" rx="3" fill="#050716" />
+      <circle cx="30" cy="54" r="12" fill="#050716" stroke="#c084fc" stroke-width="4" />
+      <circle cx="30" cy="54" r="4" fill="#22d3ee" />
+      <circle cx="76" cy="54" r="12" fill="#050716" stroke="#c084fc" stroke-width="4" />
+      <circle cx="76" cy="54" r="4" fill="#22d3ee" />
+    </g>
+    <circle cx="258" cy="72" r="10" fill="#facc15" stroke="#fde047" stroke-width="2" />
+    <circle cx="258" cy="72" r="4" fill="#fef9c3" />
+  </g>
+</svg>

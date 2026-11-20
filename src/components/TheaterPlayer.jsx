@@ -8,7 +8,8 @@ import {
   ArrowLeft, 
   Share2, 
   Check, 
-  Gamepad2
+  Gamepad2,
+  Trash2
 } from 'lucide-react';
 import { extractIframeSrc } from '../utils/iframeHelper';
 
@@ -16,6 +17,7 @@ export const TheaterPlayer = ({
   game,
   isFavorite,
   onToggleFavorite,
+  onRemoveGame,
   onClose,
   onSelectGame,
   allGames
@@ -25,8 +27,16 @@ export const TheaterPlayer = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
+  const [isFrameLoading, setIsFrameLoading] = useState(true);
 
   const iframeSrc = extractIframeSrc(game.iframe);
+  const isExternal = /^https?:\/\//i.test(iframeSrc);
+
+  useEffect(() => {
+    setIsFrameLoading(true);
+    const fallbackTimer = setTimeout(() => setIsFrameLoading(false), 2600);
+    return () => clearTimeout(fallbackTimer);
+  }, [game.id, iframeKey]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -125,14 +135,27 @@ export const TheaterPlayer = ({
               <Star className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
             </button>
 
-            {/* Popout Window */}
-            <button
-              onClick={handlePopout}
-              title="Open in new window"
-              className="neon-btn-outline p-1.5 rounded-lg hidden sm:block cursor-pointer"
-            >
-              <ExternalLink className="w-4 h-4" />
-            </button>
+            {/* Remove custom game */}
+            {game.isCustom && onRemoveGame && (
+              <button
+                onClick={(e) => onRemoveGame(game.id, e)}
+                title="Remove custom game"
+                className="neon-btn-danger p-1.5 rounded-lg cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Popout Window (local games only so external games stay on-site) */}
+            {!isExternal && (
+              <button
+                onClick={handlePopout}
+                title="Open in new window"
+                className="neon-btn-outline p-1.5 rounded-lg hidden sm:block cursor-pointer"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </button>
+            )}
 
             {/* Share Link */}
             <button
@@ -165,7 +188,7 @@ export const TheaterPlayer = ({
         </div>
 
         {/* Embedded Game Iframe Container */}
-        <div className={`relative w-full bg-[#04050f] flex items-center justify-center ${
+        <div className={`relative w-full bg-[#04050f] flex items-center justify-center overflow-hidden ${
           isFullscreen ? 'flex-1 h-[calc(100vh-45px)]' : 'h-[min(78vh,560px)] sm:h-[620px]'
         }`}>
           <iframe
@@ -173,10 +196,38 @@ export const TheaterPlayer = ({
             ref={iframeRef}
             src={iframeSrc}
             title={game.title}
-            className="w-full h-full border-none select-none bg-[#04050f]"
+            scrolling="no"
+            referrerPolicy="no-referrer"
+            sandbox={isExternal ? 'allow-scripts allow-same-origin allow-pointer-lock allow-forms' : undefined}
+            onLoad={() => setIsFrameLoading(false)}
+            className={`w-full h-full border-none select-none bg-[#04050f] transition-opacity duration-300 ${
+              isFrameLoading ? 'opacity-0' : 'opacity-100'
+            }`}
             allow="fullscreen; autoplay; gamepad; keyboard-map; focus-without-user-activation *"
             allowFullScreen
           />
+
+          {/* Seamless PlayVault Arcade Launch Curtain */}
+          {isFrameLoading && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#04050f] gap-4 p-6">
+              <div className="w-40 aspect-[16/10] rounded-xl overflow-hidden border border-cyan-400/40 shadow-[0_0_24px_rgba(34,211,238,0.28)]">
+                <img
+                  src={game.thumbnail || `./thumbnails/${game.id}.svg`}
+                  alt={`${game.title} loading preview`}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex flex-col items-center gap-1.5">
+                <div className="font-display text-base font-bold text-white tracking-wide">
+                  {game.title}
+                </div>
+                <div className="w-44 h-1.5 rounded-full bg-[#0c1029] overflow-hidden border border-purple-500/30">
+                  <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-cyan-400 to-purple-500 animate-pulse" />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -231,14 +282,6 @@ export const TheaterPlayer = ({
             <p className="text-xs text-slate-200 font-mono-code leading-relaxed">
               {game.controls}
             </p>
-          </div>
-
-          {/* Stored Iframe Preview */}
-          <div className="pt-2 border-t border-purple-500/20 text-[11px] text-slate-400">
-            <span className="font-semibold text-slate-300">Iframe Definition: </span>
-            <code className="text-cyan-300/90 bg-[#04050f] px-2 py-0.5 rounded font-mono-code text-[10px] break-all border border-purple-500/20">
-              {game.iframe}
-            </code>
           </div>
         </div>
 

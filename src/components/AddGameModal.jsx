@@ -177,6 +177,9 @@ export const AddGameModal = ({
                 <iframe
                   src={previewSrc}
                   title="Game Preview"
+                  scrolling="no"
+                  referrerPolicy="no-referrer"
+                  sandbox={/^https?:\/\//i.test(previewSrc) ? 'allow-scripts allow-same-origin allow-pointer-lock allow-forms' : undefined}
                   className="w-full h-full border-none"
                   allow="fullscreen; autoplay"
                 />

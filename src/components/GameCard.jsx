@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Star } from 'lucide-react';
+import { Play, Star, Trash2 } from 'lucide-react';
 import { GameIcon } from './GameIcon';
 
 function resolveThumbnailSrc(game) {
@@ -14,6 +14,7 @@ export const GameCard = ({
   game,
   isFavorite,
   onToggleFavorite,
+  onRemoveGame,
   onSelectGame
 }) => {
   const [imgError, setImgError] = useState(false);
@@ -58,6 +59,18 @@ export const GameCard = ({
             <Play className="w-5 h-5 fill-current ml-0.5 text-white drop-shadow" />
           </div>
         </div>
+
+        {/* Custom Remove Button */}
+        {game.isCustom && onRemoveGame && (
+          <button
+            type="button"
+            onClick={(e) => onRemoveGame(game.id, e)}
+            title="Remove custom game"
+            className="absolute top-2.5 left-2.5 z-10 p-1.5 rounded-lg border bg-[#050716]/75 border-rose-500/35 text-rose-300 hover:bg-rose-500/20 hover:border-rose-400/75 transition-all backdrop-blur-md cursor-pointer"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Favorite Star Button */}
         <button
