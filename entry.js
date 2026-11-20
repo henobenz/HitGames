@@ -3,7 +3,7 @@
   window.__PLAYVAULT_MOUNTED__ = true;
 
   var CLOAK_OPTIONS = [
-    { id: 'default', label: 'Default (PlayVault)', title: 'PlayVault — Neon Arcade Hub', faviconUrl: './favicon.ico' },
+    { id: 'default', label: 'Default (PlayVault)', title: 'PlayVault — Neon Arcade Hub', faviconUrl: './favicon.svg' },
     { id: 'classroom', label: 'Google Classroom', title: 'Classes — Google Classroom', faviconUrl: 'https://ssl.gstatic.com/classroom/favicon.png' },
     { id: 'drive', label: 'Google Drive', title: 'My Drive — Google Drive', faviconUrl: 'https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png' },
     { id: 'docs', label: 'Google Docs', title: 'Untitled Document — Google Docs', faviconUrl: 'https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico' },
@@ -61,7 +61,10 @@
       '.pv-btn-danger{background:rgba(244,63,94,0.12);border-color:rgba(244,63,94,0.45);color:#fda4af}',
       '.pv-btn-danger:hover{background:rgba(244,63,94,0.22);border-color:rgba(251,113,133,0.9);box-shadow:0 0 18px rgba(244,63,94,0.45)}',
       '.pv-main{flex:1;max-width:1280px;width:100%;margin:0 auto;padding:32px 20px}',
-      '.pv-hero{position:relative;border-radius:16px;background:linear-gradient(135deg,#0e1230,#080b1f,#050714);border:1px solid rgba(168,85,247,0.35);padding:28px;margin-bottom:28px;box-shadow:0 20px 45px rgba(0,0,0,0.75),0 0 28px rgba(168,85,247,0.14)}',
+      '.pv-hero{position:relative;border-radius:16px;background:linear-gradient(135deg,#0e1230,#080b1f,#050714);border:1px solid rgba(168,85,247,0.35);padding:28px;margin-bottom:28px;box-shadow:0 20px 45px rgba(0,0,0,0.75),0 0 28px rgba(168,85,247,0.14);display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:stretch}',
+      '.pv-hero-thumb{position:relative;border-radius:12px;overflow:hidden;border:1px solid rgba(34,211,238,0.35);background:#050716;min-height:180px;cursor:pointer;box-shadow:0 0 24px rgba(34,211,238,0.18)}',
+      '.pv-hero-thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .24s}',
+      '.pv-hero-thumb:hover img{transform:scale(1.05)}',
       '.pv-hero-kicker{font-size:12px;font-weight:700;color:#67e8f9;margin-bottom:10px;display:flex;align-items:center;gap:8px}',
       '.pv-hero h1{font-family:"Chakra Petch","Plus Jakarta Sans",sans-serif;margin:0 0 10px;font-size:34px;font-weight:700;color:#fff;letter-spacing:-0.02em}',
       '.pv-hero p{margin:0 0 18px;font-size:14px;color:#cbd5e1;line-height:1.6;max-width:640px}',
@@ -80,7 +83,9 @@
       '.pv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}',
       '.pv-card{position:relative;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(13,17,43,0.96),rgba(7,9,24,0.98));border:1px solid rgba(139,92,246,0.24);border-radius:16px;overflow:hidden;cursor:pointer;transition:transform .24s cubic-bezier(0.16,1,0.3,1),border-color .24s,box-shadow .24s;box-shadow:0 10px 26px -8px rgba(0,0,0,0.75)}',
       '.pv-card:hover{transform:translateY(-6px) scale(1.01);border-color:rgba(34,211,238,0.75);box-shadow:0 20px 38px -10px rgba(0,0,0,0.85),0 0 22px rgba(34,211,238,0.28),0 0 38px rgba(168,85,247,0.24)}',
-      '.pv-card-thumb{position:relative;aspect-ratio:16/10;background:#050716;border-bottom:1px solid rgba(168,85,247,0.2);display:flex;align-items:center;justify-content:center;padding:16px}',
+      '.pv-card-thumb{position:relative;aspect-ratio:16/10;background:#050716;border-bottom:1px solid rgba(168,85,247,0.2);display:flex;align-items:center;justify-content:center;overflow:hidden}',
+      '.pv-card-thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .24s}',
+      '.pv-card:hover .pv-card-thumb img{transform:scale(1.06)}',
       '.pv-card-badge{font-family:"Chakra Petch",sans-serif;font-size:30px;font-weight:700;letter-spacing:-0.03em;transition:transform .24s}',
       '.pv-card:hover .pv-card-badge{transform:scale(1.1)}',
       '.pv-fav-btn{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:8px;border:1px solid rgba(34,211,238,0.28);background:rgba(5,7,22,0.8);color:#cbd5e1;display:flex;align-items:center;justify-content:center;font-size:14px}',
@@ -97,7 +102,7 @@
       '.pv-player-frame{width:100%;height:min(78vh,580px);background:#04050f}',
       '.pv-player-frame iframe{width:100%;height:100%;border:none}',
       '.pv-details-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}',
-      '@media(max-width:900px){.pv-details-grid{grid-template-columns:1fr}.pv-nav{display:none}}',
+      '@media(max-width:900px){.pv-details-grid,.pv-hero{grid-template-columns:1fr}.pv-nav{display:none}}',
       '.pv-panel{background:rgba(8,11,31,0.9);border:1px solid rgba(168,85,247,0.25);border-radius:16px;padding:20px}',
       '.pv-modal-backdrop{position:fixed;inset:0;z-index:50;background:rgba(2,3,10,0.85);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px}',
       '.pv-modal{width:100%;max-width:680px;max-height:90vh;overflow:auto;background:#080b1f;border:1px solid rgba(168,85,247,0.4);border-radius:16px;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,0.9),0 0 32px rgba(168,85,247,0.2)}',
@@ -140,6 +145,17 @@
     return src;
   }
 
+  function resolveAssetUrl(pathStr, fallbackPath) {
+    var raw = pathStr || fallbackPath || './thumbnails/default.svg';
+    if (raw.indexOf('/thumbnails/') === 0 || raw.indexOf('/og-thumbnail') === 0) {
+      raw = '.' + raw;
+    }
+    if (state.gamesBasePrefix === './public/' && raw.indexOf('./') === 0 && raw.indexOf('./public/') !== 0) {
+      raw = './public/' + raw.slice(2);
+    }
+    return raw;
+  }
+
   function applyCloak(option) {
     state.currentCloak = option.id;
     localStorage.setItem('playvault_cloak', option.id);
@@ -147,10 +163,10 @@
     var link = document.querySelector("link[rel*='icon']");
     if (!link) {
       link = document.createElement('link');
-      link.type = 'image/x-icon';
       link.rel = 'shortcut icon';
       document.head.appendChild(link);
     }
+    link.type = option.faviconUrl.indexOf('.svg') !== -1 ? 'image/svg+xml' : 'image/x-icon';
     link.href = option.faviconUrl;
   }
 
@@ -268,11 +284,13 @@
       html += '</div></div></div>';
     } else {
       if (state.selectedCategory === 'All' && !state.searchQuery && spotlight) {
-        html += '<div class="pv-hero"><div class="pv-hero-kicker">Featured Neon Arcade Spotlight · ' + escapeHtml(spotlight.category) + '</div>';
+        var heroThumbUrl = resolveAssetUrl('./og-thumbnail.jpg');
+        html += '<div class="pv-hero"><div><div class="pv-hero-kicker">Featured Neon Arcade Spotlight · ' + escapeHtml(spotlight.category) + '</div>';
         html += '<h1>' + escapeHtml(spotlight.title) + '</h1>';
         html += '<p>' + escapeHtml(spotlight.description) + '</p>';
         html += '<div style="display:flex;align-items:center;gap:16px"><button id="pv-spotlight-play" class="pv-btn pv-btn-primary" style="padding:10px 18px;font-size:14px">Play Instantly →</button>';
         html += '<span style="font-size:12px;color:#cbd5e1">★ ' + Number(spotlight.rating || 5).toFixed(1) + ' · ' + Number(spotlight.playedCount || 0).toLocaleString() + ' plays</span></div></div>';
+        html += '<div class="pv-hero-thumb" id="pv-spotlight-thumb"><img src="' + escapeHtml(heroThumbUrl) + '" alt="PlayVault Neon Arcade Thumbnail" referrerpolicy="no-referrer"></div></div>';
       }
 
       html += '<div class="pv-controls"><div class="pv-controls-row">';
@@ -296,9 +314,10 @@
         filtered.forEach(function (game) {
           var fav = state.favorites.indexOf(game.id) !== -1;
           var plays = game.playedCount >= 1000 ? (game.playedCount / 1000).toFixed(1) + 'k' : String(game.playedCount || 0);
+          var thumbUrl = resolveAssetUrl(game.thumbnail, './thumbnails/' + game.id + '.svg');
           html += '<div class="pv-card" data-open-game="' + escapeHtml(game.id) + '">';
-          html += '<div class="pv-card-thumb" style="background:radial-gradient(circle at 35% 40%,rgba(34,211,238,0.18),rgba(168,85,247,0.14) 55%,#050716 85%)">';
-          html += '<span class="pv-card-badge" style="color:#67e8f9;text-shadow:0 0 14px rgba(168,85,247,0.65)">' + escapeHtml((game.title || '').slice(0, 2).toUpperCase()) + '</span>';
+          html += '<div class="pv-card-thumb">';
+          html += '<img src="' + escapeHtml(thumbUrl) + '" alt="' + escapeHtml(game.title) + ' thumbnail" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display=\'none\'">';
           html += '<button class="pv-fav-btn ' + (fav ? 'active' : '') + '" data-fav-id="' + escapeHtml(game.id) + '" title="Favorite">' + (fav ? '★' : '☆') + '</button>';
           html += '</div>';
           html += '<div class="pv-card-body">';
@@ -322,6 +341,7 @@
       html += '<input id="pv-add-title" class="pv-field" placeholder="Game Title *" required>';
       html += '<select id="pv-add-cat" class="pv-field"><option>Arcade</option><option>Retro</option><option>Puzzle</option><option>Action</option><option>Casual</option><option>Strategy</option></select>';
       html += '<input id="pv-add-controls" class="pv-field" placeholder="Controls hint">';
+      html += '<input id="pv-add-thumb" class="pv-field" placeholder="Thumbnail Image URL (optional)">';
       html += '<textarea id="pv-add-iframe" class="pv-field" rows="3" placeholder="<iframe src=&quot;https://example.com/game.html&quot;></iframe>" required></textarea>';
       html += '<textarea id="pv-add-desc" class="pv-field" rows="2" placeholder="Description"></textarea>';
       html += '<div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="pv-cancel-add" class="pv-btn">Cancel</button><button type="submit" class="pv-btn pv-btn-primary">Save Game to JSON</button></div>';
@@ -395,6 +415,11 @@
 
     var spotlightPlay = document.getElementById('pv-spotlight-play');
     if (spotlightPlay) spotlightPlay.onclick = function () {
+      state.selectedGame = state.games.find(function (g) { return g.id === 'snake'; }) || state.games[0];
+      render();
+    };
+    var spotlightThumb = document.getElementById('pv-spotlight-thumb');
+    if (spotlightThumb) spotlightThumb.onclick = function () {
       state.selectedGame = state.games.find(function (g) { return g.id === 'snake'; }) || state.games[0];
       render();
     };
@@ -489,6 +514,7 @@
       var title = document.getElementById('pv-add-title').value.trim();
       var cat = document.getElementById('pv-add-cat').value;
       var controls = document.getElementById('pv-add-controls').value.trim();
+      var thumbInput = document.getElementById('pv-add-thumb') ? document.getElementById('pv-add-thumb').value.trim() : '';
       var iframeVal = document.getElementById('pv-add-iframe').value.trim();
       var desc = document.getElementById('pv-add-desc').value.trim();
       if (!title || !iframeVal) return;
@@ -499,6 +525,7 @@
         category: cat,
         description: desc || 'Custom user added web game embed.',
         controls: controls || 'Click, tap, or use standard keyboard controls',
+        thumbnail: thumbInput || './thumbnails/default.svg',
         iframe: formattedIframe,
         rating: 5.0,
         playedCount: 1,

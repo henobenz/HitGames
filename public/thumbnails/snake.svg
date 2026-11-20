@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" fill="none">
+  <defs>
+    <radialGradient id="g1" cx="30%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.28" />
+      <stop offset="100%" stop-color="#04050f" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="g2" cx="75%" cy="70%" r="55%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#04050f" stop-opacity="0" />
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+  </defs>
+  <rect width="320" height="200" fill="#050716" />
+  <rect width="320" height="200" fill="url(#g1)" />
+  <rect width="320" height="200" fill="url(#g2)" />
+  <g stroke="#1e293b" stroke-width="1" opacity="0.55">
+    <path d="M40 20V180M80 20V180M120 20V180M160 20V180M200 20V180M240 20V180M280 20V180" />
+    <path d="M20 40H300M20 75H300M20 110H300M20 145H300M20 180H300" />
+  </g>
+  <rect x="28" y="22" width="264" height="156" rx="12" stroke="#312e81" stroke-width="2" />
+  <g filter="url(#glow)">
+    <rect x="64" y="114" width="28" height="28" rx="6" fill="#0891b2" />
+    <rect x="96" y="114" width="28" height="28" rx="6" fill="#06b6d4" />
+    <rect x="128" y="114" width="28" height="28" rx="6" fill="#22d3ee" />
+    <rect x="128" y="82" width="28" height="28" rx="6" fill="#7c3aed" />
+    <rect x="128" y="50" width="28" height="28" rx="6" fill="#9333ea" />
+    <rect x="160" y="50" width="28" height="28" rx="6" fill="#a855f7" />
+    <rect x="192" y="50" width="28" height="28" rx="7" fill="#22d3ee" />
+    <circle cx="201" cy="59" r="3.5" fill="#04050f" />
+    <circle cx="211" cy="59" r="3.5" fill="#04050f" />
+    <circle cx="242" cy="126" r="14" fill="#f43f5e" />
+    <circle cx="238" cy="122" r="4" fill="#fda4af" />
+  </g>
+</svg>

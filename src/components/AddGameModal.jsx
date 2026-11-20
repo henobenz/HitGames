@@ -11,6 +11,7 @@ export const AddGameModal = ({
   const [category, setCategory] = useState('Arcade');
   const [description, setDescription] = useState('');
   const [controls, setControls] = useState('');
+  const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [iframeInput, setIframeInput] = useState('');
   const [previewSrc, setPreviewSrc] = useState('');
   const [error, setError] = useState('');
@@ -54,6 +55,7 @@ export const AddGameModal = ({
       category,
       description: description.trim() || 'Custom user added web game embed.',
       controls: controls.trim() || 'Click, tap, or use standard keyboard controls',
+      thumbnail: thumbnailUrl.trim() || './thumbnails/default.svg',
       iframe: formattedIframe,
       rating: 5.0,
       playedCount: 1,
@@ -181,6 +183,19 @@ export const AddGameModal = ({
               </div>
             </div>
           )}
+
+          <div>
+            <label className="block text-xs font-semibold text-cyan-300 mb-1">
+              Thumbnail Image URL (Optional)
+            </label>
+            <input
+              type="text"
+              value={thumbnailUrl}
+              onChange={(e) => setThumbnailUrl(e.target.value)}
+              placeholder="./thumbnails/default.svg or https://..."
+              className="w-full px-3 py-2 bg-[#04050f] border border-purple-500/35 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+            />
+          </div>
 
           <div>
             <label className="block text-xs font-semibold text-cyan-300 mb-1">

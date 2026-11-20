@@ -1,6 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Play, Star } from 'lucide-react';
 import { GameIcon } from './GameIcon';
+
+function resolveThumbnailSrc(game) {
+  const raw = game.thumbnail || `./thumbnails/${game.id}.svg`;
+  if (raw.startsWith('/thumbnails/')) {
+    return `.${raw}`;
+  }
+  return raw;
+}
 
 export const GameCard = ({
   game,
@@ -8,9 +16,13 @@ export const GameCard = ({
   onToggleFavorite,
   onSelectGame
 }) => {
-  const formattedPlays = game.playedCount >= 1000 
+  const [imgError, setImgError] = useState(false);
+
+  const formattedPlays = game.playedCount >= 1000
     ? `${(game.playedCount / 1000).toFixed(1)}k`
     : game.playedCount.toString();
+
+  const thumbSrc = resolveThumbnailSrc(game);
 
   return (
     <div
@@ -20,14 +32,25 @@ export const GameCard = ({
       {/* Animated Diagonal Light Sheen on Hover */}
       <div className="arcade-card-sheen z-20" />
 
-      {/* Visual Thumbnail / Vector Preview */}
+      {/* Visual Thumbnail Preview */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#050716] rounded-t-2xl border-b border-purple-500/20">
-        <GameIcon 
-          id={game.id} 
-          category={game.category} 
-          title={game.title} 
-          accentColor={game.accentColor} 
-        />
+        {!imgError ? (
+          <img
+            src={thumbSrc}
+            alt={`${game.title} game thumbnail`}
+            referrerPolicy="no-referrer"
+            loading="lazy"
+            onError={() => setImgError(true)}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <GameIcon
+            id={game.id}
+            category={game.category}
+            title={game.title}
+            accentColor={game.accentColor}
+          />
+        )}
 
         {/* Hover Play Button Overlay */}
         <div className="absolute inset-0 bg-[#040510]/65 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center backdrop-blur-[2px]">

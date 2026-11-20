@@ -254,8 +254,16 @@ export const TheaterPlayer = ({
                 onClick={() => onSelectGame(rel)}
                 className="flex items-center gap-3 p-2.5 rounded-xl bg-[#050716]/90 hover:bg-[#0d1130] border border-purple-500/20 hover:border-cyan-400/60 hover:shadow-[0_0_14px_rgba(34,211,238,0.2)] cursor-pointer transition-all group"
               >
-                <div className="w-10 h-10 rounded-lg bg-[#0b0f29] border border-purple-500/30 flex items-center justify-center text-purple-300 group-hover:text-cyan-300 group-hover:border-cyan-400/50 shrink-0 transition-colors">
-                  <Gamepad2 className="w-5 h-5" />
+                <div className="w-16 h-10 rounded-lg bg-[#0b0f29] border border-purple-500/30 overflow-hidden flex items-center justify-center text-purple-300 group-hover:border-cyan-400/50 shrink-0 transition-colors">
+                  <img
+                    src={rel.thumbnail || `./thumbnails/${rel.id}.svg`}
+                    alt={`${rel.title} thumbnail`}
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <div className="flex flex-col min-w-0 flex-1">
                   <span className="text-xs font-bold text-slate-100 group-hover:text-cyan-300 truncate transition-colors">

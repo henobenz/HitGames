@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" fill="none">
+  <defs>
+    <radialGradient id="g1" cx="50%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.32" />
+      <stop offset="100%" stop-color="#04050f" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="g2" cx="25%" cy="75%" r="55%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#04050f" stop-opacity="0" />
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+  </defs>
+  <rect width="320" height="200" fill="#050716" />
+  <rect width="320" height="200" fill="url(#g1)" />
+  <rect width="320" height="200" fill="url(#g2)" />
+  <rect x="82" y="18" width="156" height="164" rx="10" fill="#070a1e" stroke="#4c1d95" stroke-width="2" />
+  <g stroke="#1e1b4b" stroke-width="1" opacity="0.7">
+    <path d="M108 18V182M134 18V182M160 18V182M186 18V182M212 18V182" />
+    <path d="M82 44H238M82 70H238M82 96H238M82 122H238M82 148H238" />
+  </g>
+  <g filter="url(#glow)">
+    <rect x="134" y="32" width="24" height="24" rx="4" fill="#a855f7" stroke="#e9d5ff" stroke-width="1" />
+    <rect x="108" y="58" width="24" height="24" rx="4" fill="#a855f7" stroke="#e9d5ff" stroke-width="1" />
+    <rect x="134" y="58" width="24" height="24" rx="4" fill="#a855f7" stroke="#e9d5ff" stroke-width="1" />
+    <rect x="160" y="58" width="24" height="24" rx="4" fill="#a855f7" stroke="#e9d5ff" stroke-width="1" />
+    <rect x="190" y="72" width="24" height="24" rx="4" fill="#22d3ee" />
+    <rect x="190" y="98" width="24" height="24" rx="4" fill="#22d3ee" />
+    <rect x="190" y="124" width="24" height="24" rx="4" fill="#22d3ee" />
+    <rect x="190" y="150" width="24" height="24" rx="4" fill="#22d3ee" />
+    <rect x="86" y="124" width="24" height="24" rx="4" fill="#f59e0b" />
+    <rect x="112" y="124" width="24" height="24" rx="4" fill="#f59e0b" />
+    <rect x="86" y="150" width="24" height="24" rx="4" fill="#f59e0b" />
+    <rect x="112" y="150" width="24" height="24" rx="4" fill="#f59e0b" />
+    <rect x="138" y="150" width="24" height="24" rx="4" fill="#f43f5e" />
+    <rect x="164" y="150" width="24" height="24" rx="4" fill="#f43f5e" />
+  </g>
+</svg>

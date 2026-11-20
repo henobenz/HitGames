@@ -15,8 +15,10 @@ import { TheaterPlayer } from './components/TheaterPlayer';
 import { AddGameModal } from './components/AddGameModal';
 import { JsonViewerModal } from './components/JsonViewerModal';
 import { PanicOverlay } from './components/PanicOverlay';
+import arcadeHeroThumbnail from './assets/images/playvault_arcade_thumbnail_1795159396107.jpg';
 
 export default function App() {
+  const [heroThumbError, setHeroThumbError] = useState(false);
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
@@ -106,10 +108,10 @@ export default function App() {
     let link = document.querySelector("link[rel*='icon']");
     if (!link) {
       link = document.createElement('link');
-      link.type = 'image/x-icon';
       link.rel = 'shortcut icon';
       document.getElementsByTagName('head')[0].appendChild(link);
     }
+    link.type = option.faviconUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/x-icon';
     link.href = option.faviconUrl;
   };
 
@@ -233,36 +235,59 @@ export default function App() {
                 <div className="absolute -top-20 right-10 w-80 h-80 bg-cyan-400/15 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute -bottom-24 left-1/3 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
                 
-                <div className="relative z-10 max-w-2xl flex flex-col gap-3">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-cyan-300">
-                    <Flame className="w-4 h-4 text-purple-400" />
-                    <span>Featured Neon Arcade Spotlight</span>
-                    <span aria-hidden="true" className="text-purple-400/50">·</span>
-                    <span className="text-slate-300">{featuredSpotlight.category}</span>
+                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                  <div className="lg:col-span-7 flex flex-col justify-center gap-3">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-cyan-300">
+                      <Flame className="w-4 h-4 text-purple-400" />
+                      <span>Featured Neon Arcade Spotlight</span>
+                      <span aria-hidden="true" className="text-purple-400/50">·</span>
+                      <span className="text-slate-300">{featuredSpotlight.category}</span>
+                    </div>
+
+                    <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-white text-balance drop-shadow-[0_0_16px_rgba(34,211,238,0.22)]">
+                      {featuredSpotlight.title}
+                    </h1>
+
+                    <p className="text-sm text-slate-300 leading-relaxed max-w-xl">
+                      {featuredSpotlight.description}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-4 pt-2">
+                      <button
+                        onClick={() => setSelectedGame(featuredSpotlight)}
+                        className="neon-btn-cyan flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm cursor-pointer"
+                      >
+                        <span>Play Instantly</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                      
+                      <div className="flex items-center gap-2 text-xs text-slate-300 tabular-nums">
+                        <span className="text-amber-300 font-semibold">★ {featuredSpotlight.rating.toFixed(1)}</span>
+                        <span aria-hidden="true" className="text-purple-400/60">·</span>
+                        <span>{featuredSpotlight.playedCount.toLocaleString()} plays</span>
+                      </div>
+                    </div>
                   </div>
 
-                  <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-white text-balance drop-shadow-[0_0_16px_rgba(34,211,238,0.22)]">
-                    {featuredSpotlight.title}
-                  </h1>
-
-                  <p className="text-sm text-slate-300 leading-relaxed max-w-xl">
-                    {featuredSpotlight.description}
-                  </p>
-
-                  <div className="flex flex-wrap items-center gap-4 pt-2">
-                    <button
-                      onClick={() => setSelectedGame(featuredSpotlight)}
-                      className="neon-btn-cyan flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm cursor-pointer"
-                    >
-                      <span>Play Instantly</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                    
-                    <div className="flex items-center gap-2 text-xs text-slate-300 tabular-nums">
-                      <span className="text-amber-300 font-semibold">★ {featuredSpotlight.rating.toFixed(1)}</span>
-                      <span aria-hidden="true" className="text-purple-400/60">·</span>
-                      <span>{featuredSpotlight.playedCount.toLocaleString()} plays</span>
-                    </div>
+                  <div
+                    onClick={() => setSelectedGame(featuredSpotlight)}
+                    className="lg:col-span-5 relative aspect-[16/9] lg:aspect-auto min-h-[190px] rounded-xl overflow-hidden border border-cyan-400/35 bg-[#050716] cursor-pointer group shadow-[0_0_24px_rgba(34,211,238,0.18)]"
+                  >
+                    {!heroThumbError ? (
+                      <img
+                        src={arcadeHeroThumbnail}
+                        alt="PlayVault Neon Arcade Cabinet Thumbnail"
+                        referrerPolicy="no-referrer"
+                        onError={() => setHeroThumbError(true)}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#0e1438] to-[#050716] text-cyan-300 gap-2">
+                        <Gamepad2 className="w-10 h-10" />
+                        <span className="font-display text-sm font-bold text-white">{featuredSpotlight.title}</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#04050f]/80 via-transparent to-transparent pointer-events-none" />
                   </div>
                 </div>
               </div>

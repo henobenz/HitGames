@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" fill="none">
+  <defs>
+    <radialGradient id="g1" cx="40%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.28" />
+      <stop offset="100%" stop-color="#04050f" stop-opacity="0" />
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+  </defs>
+  <rect width="320" height="200" fill="#050716" />
+  <rect width="320" height="200" fill="url(#g1)" />
+  <circle cx="60" cy="40" r="2" fill="#67e8f9" opacity="0.6" />
+  <circle cx="140" cy="30" r="1.5" fill="#c084fc" opacity="0.7" />
+  <circle cx="280" cy="45" r="2" fill="#67e8f9" opacity="0.5" />
+  <g filter="url(#glow)">
+    <rect x="200" y="0" width="44" height="68" fill="#7c3aed" />
+    <rect x="194" y="58" width="56" height="16" rx="4" fill="#a855f7" />
+    <rect x="200" y="132" width="44" height="68" fill="#7c3aed" />
+    <rect x="194" y="128" width="56" height="16" rx="4" fill="#a855f7" />
+
+    <circle cx="106" cy="98" r="20" fill="#22d3ee" />
+    <ellipse cx="98" cy="102" rx="11" ry="7" fill="#a5f3fc" />
+    <circle cx="115" cy="92" r="6" fill="#ffffff" />
+    <circle cx="117" cy="92" r="2.8" fill="#04050f" />
+    <polygon points="124,95 140,101 124,107" fill="#f43f5e" />
+  </g>
+</svg>

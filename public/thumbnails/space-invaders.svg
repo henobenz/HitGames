@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" fill="none">
+  <defs>
+    <radialGradient id="g1" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#04050f" stop-opacity="0" />
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+  </defs>
+  <rect width="320" height="200" fill="#050716" />
+  <rect width="320" height="200" fill="url(#g1)" />
+  <g filter="url(#glow)">
+    <g fill="#f43f5e">
+      <rect x="64" y="34" width="38" height="24" rx="4" />
+      <rect x="56" y="42" width="8" height="12" />
+      <rect x="102" y="42" width="8" height="12" />
+      <rect x="74" y="42" width="6" height="6" fill="#04050f" />
+      <rect x="86" y="42" width="6" height="6" fill="#04050f" />
+    </g>
+    <g fill="#a855f7">
+      <rect x="141" y="34" width="38" height="24" rx="4" />
+      <rect x="133" y="42" width="8" height="12" />
+      <rect x="179" y="42" width="8" height="12" />
+      <rect x="151" y="42" width="6" height="6" fill="#04050f" />
+      <rect x="163" y="42" width="6" height="6" fill="#04050f" />
+    </g>
+    <g fill="#22d3ee">
+      <rect x="218" y="34" width="38" height="24" rx="4" />
+      <rect x="210" y="42" width="8" height="12" />
+      <rect x="256" y="42" width="8" height="12" />
+      <rect x="228" y="42" width="6" height="6" fill="#04050f" />
+      <rect x="240" y="42" width="6" height="6" fill="#04050f" />
+    </g>
+    <g fill="#c084fc">
+      <rect x="102" y="76" width="38" height="24" rx="4" />
+      <rect x="180" y="76" width="38" height="24" rx="4" />
+    </g>
+    <line x1="160" y1="112" x2="160" y2="138" stroke="#67e8f9" stroke-width="5" stroke-linecap="round" />
+    <rect x="132" y="152" width="56" height="22" rx="5" fill="#22d3ee" />
+    <rect x="154" y="140" width="12" height="14" rx="3" fill="#22d3ee" />
+  </g>
+</svg>
