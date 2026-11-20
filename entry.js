@@ -37,7 +37,11 @@
     theaterScoreSaved: false,
     lbFilterGame: 'all',
     lbConfirmReset: false,
-    lbSubmitted: false
+    lbSubmitted: false,
+    isDrawerOpen: false,
+    drawerTab: 'top',
+    drawerSaved: false,
+    liveScore: 0
   };
 
   var playTimerId = null;
@@ -135,6 +139,10 @@
       '.pv-dropdown-item:hover{background:rgba(168,85,247,0.18)}',
       '.pv-footer{margin-top:auto;border-top:1px solid rgba(168,85,247,0.2);background:rgba(4,5,15,0.95);padding:24px 20px;font-size:12px;color:#94a3b8}',
       '.pv-footer-inner{max-width:1280px;margin:0 auto;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}',
+      '.pv-drawer-wrap{position:fixed;bottom:16px;right:16px;z-index:35;display:flex;flex-direction:column;align-items:flex-end;gap:10px;pointer-events:none}',
+      '.pv-drawer-wrap>*{pointer-events:auto}',
+      '.pv-drawer{width:min(420px,calc(100vw - 2rem));max-height:76vh;display:flex;flex-direction:column;background:rgba(6,9,26,0.97);backdrop-filter:blur(16px);border:1px solid rgba(168,85,247,0.45);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.88),0 0 28px rgba(34,211,238,0.18);overflow:hidden}',
+      '.pv-drawer-body{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}',
       '.pv-panic{position:fixed;inset:0;z-index:100;background:#f8f9fa;color:#1e293b;display:flex;flex-direction:column;overflow:auto}'
     ].join('\n');
     document.head.appendChild(style);
@@ -209,7 +217,9 @@
     if (!game) return;
     state.selectedGame = game;
     state.activeView = 'catalog';
+    state.isDrawerOpen = false;
     state.theaterSeconds = 0;
+    state.liveScore = 0;
     state.theaterScoreSaved = false;
 
     state.recentIds = [game.id].concat(state.recentIds.filter(function (id) { return id !== game.id; })).slice(0, 6);
@@ -234,6 +244,119 @@
     }
   }
 
+  var LOCAL_HIGH_KEYS = {
+    snake: 'playvault_snake_high',
+    tetris: 'playvault_tetris_high',
+    '2048': 'playvault_2048_best',
+    stack: 'playvault_stack_high',
+    flappy: 'playvault_flappy_high',
+    dino: 'playvault_dino_high'
+  };
+
+  function persistLeaderboard(entries) {
+    state.leaderboardEntries = (entries || []).slice(0, 200);
+    try {
+      var serialized = JSON.stringify(state.leaderboardEntries);
+      localStorage.setItem('playvault_global_leaderboard', serialized);
+      localStorage.setItem('playvault_leaderboard', serialized);
+    } catch (e) {}
+  }
+
+  function loadLeaderboardFromStorage() {
+    var list = [];
+    var seen = {};
+    try {
+      var g = JSON.parse(localStorage.getItem('playvault_global_leaderboard') || '[]');
+      var l = JSON.parse(localStorage.getItem('playvault_leaderboard') || '[]');
+      g.concat(l).forEach(function (item) {
+        if (!item || !item.gameId || isNaN(Number(item.score))) return;
+        var id = item.id || (item.gameId + '-' + (item.createdAt || Date.now()));
+        if (!seen[id]) {
+          seen[id] = true;
+          list.push({
+            id: id,
+            gameId: item.gameId,
+            player: String(item.player || 'Player 1').trim().slice(0, 18),
+            score: Number(item.score),
+            note: item.note || '',
+            source: item.source || 'manual',
+            createdAt: Number(item.createdAt) || Date.now()
+          });
+        }
+      });
+    } catch (e) {}
+
+    var changed = false;
+    var activePlayer = (localStorage.getItem('playvault_player_name') || state.playerHandle || 'Player 1').trim().slice(0, 18) || 'Player 1';
+    Object.keys(LOCAL_HIGH_KEYS).forEach(function (gid) {
+      var localBest = parseInt(localStorage.getItem(LOCAL_HIGH_KEYS[gid]) || '0', 10);
+      if (localBest > 0) {
+        var top = list.filter(function (x) { return x.gameId === gid; }).reduce(function (m, x) { return x.score > m ? x.score : m; }, 0);
+        if (localBest > top) {
+          list.unshift({ id: 'auto-' + gid, gameId: gid, player: activePlayer, score: localBest, note: 'Auto-synced high score', source: 'auto', createdAt: Date.now() });
+          changed = true;
+        }
+      }
+    });
+    if (changed) persistLeaderboard(list);
+    else state.leaderboardEntries = list;
+  }
+
+  function upsertAutoScore(gameId, scoreVal) {
+    var numeric = Number(scoreVal);
+    if (!gameId || isNaN(numeric) || numeric <= 0) return false;
+    var top = state.leaderboardEntries.filter(function (e) { return e.gameId === gameId; }).reduce(function (m, e) { return e.score > m ? e.score : m; }, 0);
+    if (numeric <= top) return false;
+    var cleanPlayer = (localStorage.getItem('playvault_player_name') || state.playerHandle || 'Player 1').trim().slice(0, 18) || 'Player 1';
+    var autoId = 'auto-' + gameId + '-' + cleanPlayer.toLowerCase().replace(/[^a-z0-9]/g, '');
+    var filtered = state.leaderboardEntries.filter(function (e) { return e.id !== autoId && e.id !== ('auto-' + gameId); });
+    persistLeaderboard([{ id: autoId, gameId: gameId, player: cleanPlayer, score: numeric, note: 'Auto-synced high score', source: 'auto', createdAt: Date.now() }].concat(filtered));
+    return true;
+  }
+
+  function syncScoreFromIframe() {
+    if (!state.selectedGame) return;
+    var g = state.selectedGame;
+    var src = extractIframeSrc(g.iframe);
+    if (/^https?:\/\//i.test(src)) return;
+
+    var current = 0;
+    var best = LOCAL_HIGH_KEYS[g.id] ? parseInt(localStorage.getItem(LOCAL_HIGH_KEYS[g.id]) || '0', 10) : 0;
+    var frame = document.getElementById('pv-game-iframe');
+    if (frame) {
+      try {
+        var doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+        if (doc) {
+          ['#score', '#p1Score'].forEach(function (sel) {
+            var el = doc.querySelector(sel);
+            if (el) {
+              var v = parseInt((el.textContent || '').replace(/[^0-9-]/g, ''), 10);
+              if (!isNaN(v) && v > current) current = v;
+            }
+          });
+          ['#highScore', '#bestScore'].forEach(function (sel) {
+            var el = doc.querySelector(sel);
+            if (el) {
+              var v = parseInt((el.textContent || '').replace(/[^0-9-]/g, ''), 10);
+              if (!isNaN(v) && v > best) best = v;
+            }
+          });
+        }
+      } catch (e) {}
+    }
+
+    if (current > 0) {
+      state.liveScore = current;
+      var lsEl = document.getElementById('pv-live-score');
+      if (lsEl) {
+        lsEl.textContent = '· Score: ' + current.toLocaleString();
+        lsEl.style.display = 'inline';
+      }
+    }
+    var peak = Math.max(current, best);
+    if (peak > 0) upsertAutoScore(g.id, peak);
+  }
+
   function startPlayTimer() {
     stopPlayTimer();
     if (!state.selectedGame) return;
@@ -250,6 +373,7 @@
       }
       var el = document.getElementById('pv-live-timer');
       if (el) el.textContent = formatClock(state.theaterSeconds);
+      syncScoreFromIframe();
     }, 1000);
   }
 
@@ -266,10 +390,10 @@
       player: cleanPlayer,
       score: numeric,
       note: String(note || '').trim().slice(0, 28),
+      source: 'manual',
       createdAt: Date.now()
     };
-    state.leaderboardEntries = [entry].concat(state.leaderboardEntries).slice(0, 100);
-    localStorage.setItem('playvault_leaderboard', JSON.stringify(state.leaderboardEntries));
+    persistLeaderboard([entry].concat(state.leaderboardEntries));
     return true;
   }
 
@@ -495,7 +619,8 @@
       html += '<div id="pv-player-box" class="pv-player-box">';
       html += '<div class="pv-player-bar">';
       html += '<div style="display:flex;align-items:center;gap:10px"><span style="font-weight:700;color:#fff;font-size:14px">' + escapeHtml(g.title) + ' <span style="color:#67e8f9;font-weight:400">· ' + escapeHtml(g.category) + '</span></span>';
-      html += '<span id="pv-live-timer" style="font-family:monospace;font-size:11px;color:#67e8f9;padding:2px 8px;border-radius:6px;border:1px solid rgba(34,211,238,0.3);background:#050716">' + formatClock(state.theaterSeconds) + '</span></div>';
+      html += '<span id="pv-live-timer" style="font-family:monospace;font-size:11px;color:#67e8f9;padding:2px 8px;border-radius:6px;border:1px solid rgba(34,211,238,0.3);background:#050716">' + formatClock(state.theaterSeconds) + '</span>';
+      html += '<span id="pv-live-score" style="font-family:monospace;font-size:11px;color:#fcd34d;display:' + (state.liveScore > 0 ? 'inline' : 'none') + '">· Score: ' + state.liveScore.toLocaleString() + '</span></div>';
       html += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">';
       html += '<button id="pv-reload-btn" class="pv-btn">Restart</button>';
       html += '<button id="pv-theater-fav" class="pv-btn">' + (isFav ? '★ Favorited' : '☆ Favorite') + '</button>';
@@ -609,7 +734,8 @@
           html += '<button class="pv-fav-btn ' + (fav ? 'active' : '') + '" data-fav-id="' + escapeHtml(game.id) + '" title="Favorite">' + (fav ? '★' : '☆') + '</button>';
           html += '</div>';
           html += '<div class="pv-card-body">';
-          html += '<div class="pv-card-meta"><span style="color:#67e8f9">' + escapeHtml(game.category) + '</span><span>·</span><span>' + (hasTouch ? 'Touch &amp; Keyboard' : 'Keyboard &amp; Mouse') + '</span>' + (sessionCount > 0 ? '<span>·</span><span style="color:#d8b4fe">' + sessionCount + (sessionCount === 1 ? ' play' : ' plays') + '</span>' : '') + '</div>';
+          var cardBest = bestByGame[game.id];
+          html += '<div class="pv-card-meta"><span style="color:#67e8f9">' + escapeHtml(game.category) + '</span><span>·</span><span>' + (hasTouch ? 'Touch &amp; Keyboard' : 'Keyboard &amp; Mouse') + '</span>' + (cardBest > 0 ? '<span>·</span><span style="color:#fcd34d;font-weight:700">Best ' + Number(cardBest).toLocaleString() + '</span>' : sessionCount > 0 ? '<span>·</span><span style="color:#d8b4fe">' + sessionCount + (sessionCount === 1 ? ' play' : ' plays') + '</span>' : '') + '</div>';
           html += '<h3 class="pv-card-title">' + escapeHtml(game.title) + '</h3>';
           html += '<p class="pv-card-desc">' + escapeHtml(game.description) + '</p>';
           html += '<div class="pv-card-foot"><span>' + escapeHtml((game.controls || '').split('·')[0]) + '</span><span style="color:#c084fc;font-weight:700">Play →</span></div>';
@@ -621,6 +747,60 @@
 
     html += '</main>';
     html += '<footer class="pv-footer"><div class="pv-footer-inner"><span><strong style="color:#67e8f9">PlayVault</strong> · Neon Arcade Portal · Instant browser arcade games</span><div style="display:flex;gap:16px"><button id="pv-foot-lb">Leaderboard</button><button id="pv-foot-random">Random Game</button><button id="pv-foot-panic">Panic Mode</button></div></div></footer>';
+
+    // Persistent Floating Global Leaderboard Drawer
+    if (state.games.length > 0) {
+      var topRecord = state.leaderboardEntries.reduce(function (m, e) { return !m || e.score > m.score ? e : m; }, null);
+      var drawerGamesMap = {};
+      state.games.forEach(function (gm) { drawerGamesMap[gm.id] = gm; });
+      html += '<div class="pv-drawer-wrap">';
+      if (state.isDrawerOpen) {
+        html += '<aside class="pv-drawer">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#0a0f29;border-bottom:1px solid rgba(168,85,247,0.25)">';
+        html += '<div><div style="font-family:&quot;Chakra Petch&quot;,sans-serif;font-size:14px;font-weight:700;color:#fff">Global Leaderboard</div><div style="font-size:11px;color:#94a3b8">' + state.leaderboardEntries.length + ' saved records across all games</div></div>';
+        html += '<div style="display:flex;gap:6px"><button id="pv-dr-full" class="pv-btn" style="padding:4px 8px;font-size:11px">Full View ↗</button><button id="pv-dr-close" style="color:#94a3b8;font-size:14px;padding:2px 6px">✕</button></div></div>';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:8px;background:#040612;border-bottom:1px solid rgba(168,85,247,0.2)">';
+        html += '<button data-dr-tab="top" class="pv-tab ' + (state.drawerTab === 'top' ? 'active' : '') + '">Top Scores</button>';
+        html += '<button data-dr-tab="games" class="pv-tab ' + (state.drawerTab === 'games' ? 'active' : '') + '">All Games</button></div>';
+        html += '<form id="pv-dr-form" style="padding:10px 12px;background:#080c22;border-bottom:1px solid rgba(168,85,247,0.2);display:flex;flex-direction:column;gap:8px">';
+        html += '<div style="display:grid;grid-template-columns:1fr 1.2fr 0.8fr;gap:6px">';
+        html += '<input id="pv-dr-player" class="pv-field" style="padding:6px 8px;font-size:12px" type="text" maxlength="18" placeholder="Tag" value="' + escapeHtml(state.playerHandle) + '">';
+        html += '<select id="pv-dr-game" class="pv-field" style="padding:6px 8px;font-size:12px">';
+        state.games.forEach(function (gm) {
+          var sel = state.selectedGame && state.selectedGame.id === gm.id ? ' selected' : '';
+          html += '<option value="' + escapeHtml(gm.id) + '"' + sel + '>' + escapeHtml(gm.title) + '</option>';
+        });
+        html += '</select>';
+        html += '<input id="pv-dr-score" class="pv-field" style="padding:6px 8px;font-size:12px" type="number" min="0" required placeholder="Score"></div>';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:' + (state.drawerSaved ? '#6ee7b7' : '#94a3b8') + '">' + (state.drawerSaved ? 'Saved to localStorage!' : 'Local games auto-sync') + '</span>';
+        html += '<button type="submit" class="pv-btn pv-btn-primary" style="padding:4px 10px;font-size:11px">+ Log Score</button></div></form>';
+        html += '<div class="pv-drawer-body">';
+        if (state.drawerTab === 'games') {
+          state.games.forEach(function (gm) {
+            var gb = bestByGame[gm.id];
+            html += '<div data-select-game="' + escapeHtml(gm.id) + '" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:10px;background:#090d24;border:1px solid rgba(168,85,247,0.2);cursor:pointer">';
+            html += '<span style="font-size:12px;font-weight:700;color:#fff">' + escapeHtml(gm.title) + '</span>';
+            html += '<span style="font-family:monospace;font-size:12px;font-weight:700;color:' + (gb > 0 ? '#fcd34d' : '#64748b') + '">' + (gb > 0 ? Number(gb).toLocaleString() : 'Play →') + '</span></div>';
+          });
+        } else {
+          var ranked = state.leaderboardEntries.slice().sort(function (a, b) { return b.score - a.score; }).slice(0, 20);
+          if (ranked.length === 0) {
+            html += '<div style="padding:24px;text-align:center;font-size:12px;color:#94a3b8">No scores yet. Play a game or log one above!</div>';
+          } else {
+            ranked.forEach(function (entry, idx) {
+              var gm = drawerGamesMap[entry.gameId];
+              html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:10px;background:#090d24;border:1px solid rgba(168,85,247,0.2)">';
+              html += '<div style="min-width:0"><div style="font-size:12px;font-weight:700;color:#fff"><span style="color:#67e8f9;font-family:monospace;margin-right:6px">#' + (idx + 1) + '</span>' + escapeHtml(entry.player) + '</div>';
+              html += '<div style="font-size:11px;color:#94a3b8">' + escapeHtml(gm ? gm.title : entry.gameId) + '</div></div>';
+              html += '<span style="font-family:monospace;font-size:12px;font-weight:700;color:#67e8f9">' + Number(entry.score).toLocaleString() + '</span></div>';
+            });
+          }
+        }
+        html += '</div></aside>';
+      }
+      html += '<button id="pv-dr-toggle" class="pv-btn pv-btn-purple" style="padding:10px 14px;font-size:12px;box-shadow:0 12px 30px rgba(0,0,0,0.75),0 0 20px rgba(168,85,247,0.45)">Global Leaderboard · ' + (topRecord ? Number(topRecord.score).toLocaleString() : state.leaderboardEntries.length) + '</button>';
+      html += '</div>';
+    }
 
     html += '</div>';
     root.innerHTML = html;
@@ -854,8 +1034,7 @@
     document.querySelectorAll('[data-del-score]').forEach(function (btn) {
       btn.onclick = function () {
         var id = btn.getAttribute('data-del-score');
-        state.leaderboardEntries = state.leaderboardEntries.filter(function (entry) { return entry.id !== id; });
-        localStorage.setItem('playvault_leaderboard', JSON.stringify(state.leaderboardEntries));
+        persistLeaderboard(state.leaderboardEntries.filter(function (entry) { return entry.id !== id; }));
         render();
       };
     });
@@ -872,9 +1051,34 @@
       state.lbConfirmReset = false;
       localStorage.removeItem('playvault_stats');
       localStorage.removeItem('playvault_recent');
+      localStorage.removeItem('playvault_global_leaderboard');
       localStorage.removeItem('playvault_leaderboard');
       render();
     };
+
+    var drToggle = document.getElementById('pv-dr-toggle');
+    if (drToggle) drToggle.onclick = function () { state.isDrawerOpen = !state.isDrawerOpen; render(); };
+    var drClose = document.getElementById('pv-dr-close');
+    if (drClose) drClose.onclick = function () { state.isDrawerOpen = false; render(); };
+    var drFull = document.getElementById('pv-dr-full');
+    if (drFull) drFull.onclick = function () { stopPlayTimer(); state.isDrawerOpen = false; state.selectedGame = null; state.activeView = 'leaderboard'; render(); };
+    document.querySelectorAll('[data-dr-tab]').forEach(function (btn) {
+      btn.onclick = function () { state.drawerTab = btn.getAttribute('data-dr-tab'); render(); };
+    });
+    var drForm = document.getElementById('pv-dr-form');
+    if (drForm) {
+      drForm.onsubmit = function (e) {
+        e.preventDefault();
+        var p = document.getElementById('pv-dr-player').value;
+        var g = document.getElementById('pv-dr-game').value;
+        var s = document.getElementById('pv-dr-score').value;
+        if (saveScore(g, p, s, '')) {
+          state.drawerSaved = true;
+          render();
+          setTimeout(function () { state.drawerSaved = false; render(); }, 1800);
+        }
+      };
+    }
   }
 
   async function init() {
@@ -882,8 +1086,8 @@
     try { state.favorites = JSON.parse(localStorage.getItem('playvault_favorites') || '[]'); } catch (e) {}
     try { state.recentIds = JSON.parse(localStorage.getItem('playvault_recent') || '[]'); } catch (e) {}
     try { state.playStats = JSON.parse(localStorage.getItem('playvault_stats') || '{}'); } catch (e) {}
-    try { state.leaderboardEntries = JSON.parse(localStorage.getItem('playvault_leaderboard') || '[]'); } catch (e) {}
     state.playerHandle = localStorage.getItem('playvault_player_name') || '';
+    loadLeaderboardFromStorage();
 
     var storedCloak = localStorage.getItem('playvault_cloak');
     if (storedCloak) {

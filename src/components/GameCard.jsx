@@ -14,6 +14,7 @@ export const GameCard = ({
   game,
   isFavorite,
   sessionCount = 0,
+  bestScore = null,
   onToggleFavorite,
   onRemoveGame,
   onSelectGame
@@ -88,16 +89,21 @@ export const GameCard = ({
       {/* Card Content */}
       <div className="p-4 flex flex-col flex-1">
         {/* Clean Unboxed Metadata without fake ratings */}
-        <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5 tabular-nums">
+        <div className="flex items-center flex-wrap gap-1.5 text-xs text-slate-400 mb-1.5 tabular-nums">
           <span className="text-cyan-300/90 font-medium">{game.category}</span>
           <span aria-hidden="true" className="text-purple-400/60">·</span>
           <span>{inputLabel}</span>
-          {sessionCount > 0 && (
+          {bestScore !== null && bestScore > 0 ? (
+            <>
+              <span aria-hidden="true" className="text-purple-400/60">·</span>
+              <span className="text-amber-300 font-semibold">Best {Number(bestScore).toLocaleString()}</span>
+            </>
+          ) : sessionCount > 0 ? (
             <>
               <span aria-hidden="true" className="text-purple-400/60">·</span>
               <span className="text-purple-300">{sessionCount} {sessionCount === 1 ? 'play' : 'plays'}</span>
             </>
-          )}
+          ) : null}
         </div>
 
         {/* Title */}

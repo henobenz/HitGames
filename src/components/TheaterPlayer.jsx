@@ -14,6 +14,7 @@ import {
   Clock
 } from 'lucide-react';
 import { extractIframeSrc } from '../utils/iframeHelper';
+import { readLiveGameScoreFromIframe } from '../utils/leaderboardStore';
 
 function formatClock(totalSeconds) {
   const mins = Math.floor(totalSeconds / 60);
@@ -30,6 +31,7 @@ export const TheaterPlayer = ({
   onToggleFavorite,
   onRemoveGame,
   onRecordPlaySeconds,
+  onAutoSyncScore,
   onSaveScore,
   onOpenLeaderboard,
   onClose,
@@ -43,32 +45,57 @@ export const TheaterPlayer = ({
   const [iframeKey, setIframeKey] = useState(0);
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [liveScore, setLiveScore] = useState(0);
   const [playerName, setPlayerName] = useState(defaultPlayerName || '');
   const [scoreValue, setScoreValue] = useState('');
   const [scoreSaved, setScoreSaved] = useState(false);
+  const lastSyncedRef = useRef(bestScore || 0);
 
   const iframeSrc = extractIframeSrc(game.iframe);
   const isExternal = /^https?:\/\//i.test(iframeSrc);
 
   useEffect(() => {
+    lastSyncedRef.current = bestScore || 0;
+  }, [game.id, bestScore]);
+
+  useEffect(() => {
     setIsFrameLoading(true);
     setElapsedSeconds(0);
+    setLiveScore(0);
     setScoreSaved(false);
     const fallbackTimer = setTimeout(() => setIsFrameLoading(false), 2600);
     return () => clearTimeout(fallbackTimer);
   }, [game.id, iframeKey]);
 
   useEffect(() => {
+    const syncScoreNow = () => {
+      if (isExternal) return;
+      const { currentScore, bestScore: detectedBest } = readLiveGameScoreFromIframe(iframeRef.current, game.id);
+      if (currentScore > 0) {
+        setLiveScore(currentScore);
+      }
+      const peak = Math.max(currentScore, detectedBest);
+      if (peak > (lastSyncedRef.current || 0) && onAutoSyncScore) {
+        lastSyncedRef.current = peak;
+        onAutoSyncScore({ gameId: game.id, score: peak });
+      }
+    };
+
     const interval = setInterval(() => {
       if (!document.hidden) {
         setElapsedSeconds(prev => prev + 1);
         if (onRecordPlaySeconds) {
           onRecordPlaySeconds(game.id, 1);
         }
+        syncScoreNow();
       }
     }, 1000);
-    return () => clearInterval(interval);
-  }, [game.id, onRecordPlaySeconds]);
+
+    return () => {
+      syncScoreNow();
+      clearInterval(interval);
+    };
+  }, [game.id, isExternal, onRecordPlaySeconds, onAutoSyncScore]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -161,6 +188,11 @@ export const TheaterPlayer = ({
               <Clock className="w-3.5 h-3.5 text-purple-300" />
               {formatClock(elapsedSeconds)}
             </span>
+            {liveScore > 0 && (
+              <span className="hidden sm:inline-flex items-center gap-1 text-xs text-amber-300 font-mono-code tabular-nums whitespace-nowrap">
+                · Score: {liveScore.toLocaleString()}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">

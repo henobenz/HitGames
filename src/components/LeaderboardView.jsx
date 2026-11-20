@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Trophy, Clock, Play, Trash2, Plus, Gamepad2, RotateCcw } from 'lucide-react';
+import { Trophy, Clock, Play, Trash2, Plus, Gamepad2, RotateCcw, Users } from 'lucide-react';
+import { computeBestScoreByGame, computeGlobalPlayerStandings } from '../utils/leaderboardStore';
 
 function formatDuration(totalSeconds = 0) {
   const secs = Math.max(0, Math.floor(totalSeconds));
@@ -23,6 +24,7 @@ export const LeaderboardView = ({
   onResetStats,
   onSelectGame
 }) => {
+  const [boardTab, setBoardTab] = useState('standings'); // 'standings' | 'all-games' | 'players'
   const [filterGameId, setFilterGameId] = useState('all');
   const [playerName, setPlayerName] = useState(defaultPlayerName || '');
   const [selectedGameId, setSelectedGameId] = useState(games[0]?.id || 'eggy-car');
@@ -35,6 +37,16 @@ export const LeaderboardView = ({
     games.forEach(g => { map[g.id] = g; });
     return map;
   }, [games]);
+
+  const bestByGame = useMemo(
+    () => computeBestScoreByGame(leaderboardEntries),
+    [leaderboardEntries]
+  );
+
+  const playerStandings = useMemo(
+    () => computeGlobalPlayerStandings(leaderboardEntries, games),
+    [leaderboardEntries, games]
+  );
 
   const totals = useMemo(() => {
     let sessions = 0;
@@ -73,7 +85,7 @@ export const LeaderboardView = ({
     return (leaderboardEntries || [])
       .filter(entry => filterGameId === 'all' || entry.gameId === filterGameId)
       .slice()
-      .sort((a, b) => b.score - a.score);
+      .sort((a, b) => b.score - a.score || b.createdAt - a.createdAt);
   }, [leaderboardEntries, filterGameId]);
 
   const handleSubmit = (e) => {
@@ -100,13 +112,13 @@ export const LeaderboardView = ({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2 text-xs font-semibold text-cyan-300">
               <Trophy className="w-4 h-4 text-amber-300" />
-              <span>Arcade Standings &amp; Session Records</span>
+              <span>Persistent Global Standings</span>
             </div>
             <h1 className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight">
-              Leaderboard
+              Global Leaderboard
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
-              Verified local high scores and live play-time rankings tracked directly from your arcade sessions.
+              High scores from every game on PlayVault automatically synced and persisted in localStorage across sessions.
             </p>
           </div>
 
@@ -161,9 +173,9 @@ export const LeaderboardView = ({
           </div>
         </div>
         <div className="bg-[#080b1f]/90 border border-purple-500/25 rounded-2xl p-4">
-          <div className="text-xs text-slate-400 mb-1">Recorded High Scores</div>
+          <div className="text-xs text-slate-400 mb-1">Games With Records</div>
           <div className="font-display text-2xl font-bold text-purple-300 tabular-nums">
-            {leaderboardEntries.length}
+            {Object.keys(bestByGame).length}/{games.length}
           </div>
         </div>
         <div className="bg-[#080b1f]/90 border border-purple-500/25 rounded-2xl p-4">
@@ -174,25 +186,60 @@ export const LeaderboardView = ({
         </div>
       </div>
 
-      {/* Main Split: High Scores Table (2 cols) + Most Played Ranking (1 col) */}
+      {/* Main Split: High Scores Matrix (2 cols) + Most Played Ranking (1 col) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Score Logger + Standings Table */}
+        {/* Left 2 Cols: Tabs + Score Logger + Tables */}
         <div className="lg:col-span-2 flex flex-col gap-5 bg-[#080b1f]/90 border border-purple-500/25 rounded-2xl p-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-purple-500/20">
-            <div>
-              <h2 className="font-display text-lg font-bold text-white">High Score Standings</h2>
-              <p className="text-xs text-slate-400">Record your best runs per game and filter standings</p>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setBoardTab('standings')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  boardTab === 'standings'
+                    ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/25 text-cyan-300 border border-cyan-400/60'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                High Scores ({leaderboardEntries.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setBoardTab('all-games')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  boardTab === 'all-games'
+                    ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/25 text-cyan-300 border border-cyan-400/60'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                All Games ({games.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setBoardTab('players')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                  boardTab === 'players'
+                    ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/25 text-cyan-300 border border-cyan-400/60'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Players ({playerStandings.length})</span>
+              </button>
             </div>
-            <select
-              value={filterGameId}
-              onChange={(e) => setFilterGameId(e.target.value)}
-              className="px-3 py-2 bg-[#04050f] border border-purple-500/35 rounded-xl text-xs font-medium text-slate-100 focus:outline-none focus:border-cyan-400 cursor-pointer"
-            >
-              <option value="all">All Games ({leaderboardEntries.length})</option>
-              {games.map(g => (
-                <option key={g.id} value={g.id}>{g.title}</option>
-              ))}
-            </select>
+
+            {boardTab === 'standings' && (
+              <select
+                value={filterGameId}
+                onChange={(e) => setFilterGameId(e.target.value)}
+                className="px-3 py-2 bg-[#04050f] border border-purple-500/35 rounded-xl text-xs font-medium text-slate-100 focus:outline-none focus:border-cyan-400 cursor-pointer"
+              >
+                <option value="all">All Games ({leaderboardEntries.length})</option>
+                {games.map(g => (
+                  <option key={g.id} value={g.id}>{g.title}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Log New High Score Form */}
@@ -233,91 +280,183 @@ export const LeaderboardView = ({
             </button>
           </form>
 
-          {/* Scores List */}
-          {filteredScores.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-purple-500/20 text-[11px] font-semibold text-slate-400">
-                    <th className="py-2.5 px-3">Rank</th>
-                    <th className="py-2.5 px-3">Player</th>
-                    <th className="py-2.5 px-3">Game</th>
-                    <th className="py-2.5 px-3 text-right">Score</th>
-                    <th className="py-2.5 px-3 text-right hidden sm:table-cell">Date</th>
-                    <th className="py-2.5 px-2 text-right"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-purple-500/10 text-xs">
-                  {filteredScores.map((entry, idx) => {
-                    const game = gameLookup[entry.gameId];
-                    const rankColor =
-                      idx === 0
-                        ? 'text-amber-300 font-bold'
-                        : idx === 1
-                        ? 'text-cyan-300 font-bold'
-                        : idx === 2
-                        ? 'text-purple-300 font-bold'
-                        : 'text-slate-400';
+          {boardTab === 'standings' && (
+            filteredScores.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-purple-500/20 text-[11px] font-semibold text-slate-400">
+                      <th className="py-2.5 px-3">Rank</th>
+                      <th className="py-2.5 px-3">Player</th>
+                      <th className="py-2.5 px-3">Game</th>
+                      <th className="py-2.5 px-3 text-right">Score</th>
+                      <th className="py-2.5 px-3 text-right hidden sm:table-cell">Date</th>
+                      <th className="py-2.5 px-2 text-right"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-purple-500/10 text-xs">
+                    {filteredScores.map((entry, idx) => {
+                      const game = gameLookup[entry.gameId];
+                      const rankColor =
+                        idx === 0
+                          ? 'text-amber-300 font-bold'
+                          : idx === 1
+                          ? 'text-cyan-300 font-bold'
+                          : idx === 2
+                          ? 'text-purple-300 font-bold'
+                          : 'text-slate-400';
 
-                    return (
-                      <tr key={entry.id} className="hover:bg-[#0d1130]/60 transition-colors">
-                        <td className={`py-3 px-3 tabular-nums ${rankColor}`}>
-                          #{idx + 1}
-                        </td>
-                        <td className="py-3 px-3 font-semibold text-white">
-                          {entry.player}
-                        </td>
-                        <td className="py-3 px-3">
-                          {game ? (
+                      return (
+                        <tr key={entry.id} className="hover:bg-[#0d1130]/60 transition-colors">
+                          <td className={`py-3 px-3 tabular-nums ${rankColor}`}>
+                            #{idx + 1}
+                          </td>
+                          <td className="py-3 px-3 font-semibold text-white">
+                            <span>{entry.player}</span>
+                            {entry.source === 'auto' && (
+                              <span className="ml-1.5 text-[10px] font-normal text-cyan-300/80">Synced</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3">
+                            {game ? (
+                              <button
+                                type="button"
+                                onClick={() => onSelectGame(game)}
+                                className="flex items-center gap-2 text-slate-200 hover:text-cyan-300 transition-colors cursor-pointer"
+                              >
+                                <img
+                                  src={game.thumbnail || `./thumbnails/${game.id}.svg`}
+                                  alt={game.title}
+                                  referrerPolicy="no-referrer"
+                                  className="w-8 h-5 rounded object-cover border border-purple-500/30 shrink-0"
+                                />
+                                <span className="truncate max-w-[140px]">{game.title}</span>
+                              </button>
+                            ) : (
+                              <span className="text-slate-400">{entry.gameId}</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono-code font-bold text-cyan-300 tabular-nums">
+                            {Number(entry.score).toLocaleString()}
+                          </td>
+                          <td className="py-3 px-3 text-right text-slate-400 hidden sm:table-cell tabular-nums">
+                            {new Date(entry.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-2 text-right">
                             <button
                               type="button"
-                              onClick={() => onSelectGame(game)}
-                              className="flex items-center gap-2 text-slate-200 hover:text-cyan-300 transition-colors cursor-pointer"
+                              onClick={() => onDeleteScore(entry.id)}
+                              title="Delete score"
+                              className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
                             >
-                              <img
-                                src={game.thumbnail || `./thumbnails/${game.id}.svg`}
-                                alt={game.title}
-                                referrerPolicy="no-referrer"
-                                className="w-8 h-5 rounded object-cover border border-purple-500/30 shrink-0"
-                              />
-                              <span className="truncate max-w-[140px]">{game.title}</span>
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
-                          ) : (
-                            <span className="text-slate-400">{entry.gameId}</span>
-                          )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-[#04050f]/70 rounded-xl border border-purple-500/15">
+                <Trophy className="w-8 h-8 text-purple-400/70 mb-2" />
+                <div className="font-display text-sm font-bold text-white mb-1">
+                  No High Scores Recorded Yet
+                </div>
+                <p className="text-xs text-slate-400 max-w-sm">
+                  Play any game and save your score above or right inside the game theater to climb the board.
+                </p>
+              </div>
+            )
+          )}
+
+          {boardTab === 'all-games' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {games.map((g) => {
+                const best = bestByGame[g.id];
+                return (
+                  <div
+                    key={g.id}
+                    onClick={() => onSelectGame(g)}
+                    className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#04050f]/80 hover:bg-[#0d1130] border border-purple-500/20 hover:border-cyan-400/60 cursor-pointer transition-all group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img
+                        src={g.thumbnail || `./thumbnails/${g.id}.svg`}
+                        alt={g.title}
+                        referrerPolicy="no-referrer"
+                        className="w-12 h-8 rounded-lg object-cover border border-purple-500/30 shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-white group-hover:text-cyan-300 truncate transition-colors">
+                          {g.title}
+                        </div>
+                        <div className="text-[11px] text-slate-400 truncate">
+                          {best ? `Record by ${best.player}` : g.category}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {best ? (
+                        <div className="font-mono-code text-sm font-bold text-amber-300 tabular-nums">
+                          {Number(best.score).toLocaleString()}
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-slate-500 group-hover:text-cyan-300">
+                          Play →
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {boardTab === 'players' && (
+            playerStandings.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-purple-500/20 text-[11px] font-semibold text-slate-400">
+                      <th className="py-2.5 px-3">Rank</th>
+                      <th className="py-2.5 px-3">Player</th>
+                      <th className="py-2.5 px-3 text-right">Games</th>
+                      <th className="py-2.5 px-3 text-right">Runs</th>
+                      <th className="py-2.5 px-3 text-right">Total Best Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-purple-500/10 text-xs">
+                    {playerStandings.map((p, idx) => (
+                      <tr key={p.player} className="hover:bg-[#0d1130]/60 transition-colors">
+                        <td className={`py-3 px-3 tabular-nums ${
+                          idx === 0 ? 'text-amber-300 font-bold' : idx === 1 ? 'text-cyan-300 font-bold' : 'text-slate-400'
+                        }`}>
+                          #{idx + 1}
                         </td>
+                        <td className="py-3 px-3 font-semibold text-white">{p.player}</td>
+                        <td className="py-3 px-3 text-right text-slate-300 tabular-nums">{p.gamesScored}</td>
+                        <td className="py-3 px-3 text-right text-slate-400 tabular-nums">{p.submissions}</td>
                         <td className="py-3 px-3 text-right font-mono-code font-bold text-cyan-300 tabular-nums">
-                          {Number(entry.score).toLocaleString()}
-                        </td>
-                        <td className="py-3 px-3 text-right text-slate-400 hidden sm:table-cell tabular-nums">
-                          {new Date(entry.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-2 text-right">
-                          <button
-                            type="button"
-                            onClick={() => onDeleteScore(entry.id)}
-                            title="Delete score"
-                            className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {Number(p.totalPoints).toLocaleString()}
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-[#04050f]/70 rounded-xl border border-purple-500/15">
-              <Trophy className="w-8 h-8 text-purple-400/70 mb-2" />
-              <div className="font-display text-sm font-bold text-white mb-1">
-                No High Scores Recorded Yet
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <p className="text-xs text-slate-400 max-w-sm">
-                Play any game and save your score above or right inside the game theater to climb the board.
-              </p>
-            </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-[#04050f]/70 rounded-xl border border-purple-500/15">
+                <Users className="w-8 h-8 text-cyan-400/70 mb-2" />
+                <div className="font-display text-sm font-bold text-white mb-1">
+                  No Player Standings Yet
+                </div>
+                <p className="text-xs text-slate-400">
+                  Submit scores across multiple games to rank players by combined best scores.
+                </p>
+              </div>
+            )
           )}
         </div>
 

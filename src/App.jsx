@@ -17,6 +17,14 @@ import { GameCard } from './components/GameCard';
 import { TheaterPlayer } from './components/TheaterPlayer';
 import { PanicOverlay } from './components/PanicOverlay';
 import { LeaderboardView } from './components/LeaderboardView';
+import { PersistentLeaderboardDrawer } from './components/PersistentLeaderboardDrawer';
+import {
+  GLOBAL_LEADERBOARD_KEY,
+  LEGACY_LEADERBOARD_KEY,
+  loadGlobalLeaderboard,
+  saveGlobalLeaderboard,
+  upsertAutoGameScore
+} from './utils/leaderboardStore';
 import arcadeHeroThumbnail from './assets/images/playvault_arcade_thumbnail_1795159396107.jpg';
 
 export default function App() {
@@ -104,13 +112,10 @@ export default function App() {
       if (storedStats) setPlayStats(JSON.parse(storedStats));
     } catch (e) {}
 
-    try {
-      const storedBoard = localStorage.getItem('playvault_leaderboard');
-      if (storedBoard) setLeaderboardEntries(JSON.parse(storedBoard));
-    } catch (e) {}
-
-    const storedHandle = localStorage.getItem('playvault_player_name');
+    const storedHandle = localStorage.getItem('playvault_player_name') || '';
     if (storedHandle) setPlayerHandle(storedHandle);
+
+    setLeaderboardEntries(loadGlobalLeaderboard(storedHandle || 'Player 1'));
 
     const storedCloak = localStorage.getItem('playvault_cloak');
     if (storedCloak) {
@@ -119,6 +124,19 @@ export default function App() {
         applyCloak(option);
       }
     }
+
+    const handleStorageSync = (e) => {
+      if (
+        !e.key ||
+        e.key === GLOBAL_LEADERBOARD_KEY ||
+        e.key === LEGACY_LEADERBOARD_KEY ||
+        e.key.startsWith('playvault_')
+      ) {
+        setLeaderboardEntries(loadGlobalLeaderboard(localStorage.getItem('playvault_player_name') || 'Player 1'));
+      }
+    };
+    window.addEventListener('storage', handleStorageSync);
+    return () => window.removeEventListener('storage', handleStorageSync);
   }, []);
 
   useEffect(() => {
@@ -226,22 +244,20 @@ export default function App() {
       player: cleanPlayer,
       score: Number(score),
       note: note || '',
+      source: 'manual',
       createdAt: Date.now()
     };
 
-    setLeaderboardEntries(prev => {
-      const next = [entry, ...prev].slice(0, 100);
-      localStorage.setItem('playvault_leaderboard', JSON.stringify(next));
-      return next;
-    });
+    setLeaderboardEntries(prev => saveGlobalLeaderboard([entry, ...prev]));
   }, []);
 
+  const handleAutoSyncScore = useCallback(({ gameId, score }) => {
+    const activePlayer = localStorage.getItem('playvault_player_name') || playerHandle || 'Player 1';
+    setLeaderboardEntries(prev => upsertAutoGameScore(prev, { gameId, player: activePlayer, score }));
+  }, [playerHandle]);
+
   const handleDeleteScore = useCallback((entryId) => {
-    setLeaderboardEntries(prev => {
-      const next = prev.filter(e => e.id !== entryId);
-      localStorage.setItem('playvault_leaderboard', JSON.stringify(next));
-      return next;
-    });
+    setLeaderboardEntries(prev => saveGlobalLeaderboard(prev.filter(e => e.id !== entryId)));
   }, []);
 
   const handleResetStats = useCallback(() => {
@@ -250,7 +266,8 @@ export default function App() {
     setLeaderboardEntries([]);
     localStorage.removeItem('playvault_stats');
     localStorage.removeItem('playvault_recent');
-    localStorage.removeItem('playvault_leaderboard');
+    localStorage.removeItem(GLOBAL_LEADERBOARD_KEY);
+    localStorage.removeItem(LEGACY_LEADERBOARD_KEY);
   }, []);
 
   const handleToggleFavorite = (id, e) => {
@@ -391,6 +408,7 @@ export default function App() {
             onToggleFavorite={handleToggleFavorite}
             onRemoveGame={handleRemoveGame}
             onRecordPlaySeconds={handleRecordPlaySeconds}
+            onAutoSyncScore={handleAutoSyncScore}
             onSaveScore={handleSaveScore}
             onOpenLeaderboard={() => {
               setSelectedGame(null);
@@ -711,6 +729,7 @@ export default function App() {
                     game={game}
                     isFavorite={favorites.includes(game.id)}
                     sessionCount={playStats[game.id]?.sessions || 0}
+                    bestScore={bestScoreByGame[game.id] ?? null}
                     onToggleFavorite={handleToggleFavorite}
                     onRemoveGame={handleRemoveGame}
                     onSelectGame={handleSelectGame}
@@ -786,6 +805,23 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Persistent Global Leaderboard Drawer (accessible on catalog & in-game) */}
+      {!isPanicOpen && games.length > 0 && (
+        <PersistentLeaderboardDrawer
+          games={games}
+          leaderboardEntries={leaderboardEntries}
+          activeGame={selectedGame}
+          defaultPlayerName={playerHandle}
+          onSaveScore={handleSaveScore}
+          onDeleteScore={handleDeleteScore}
+          onSelectGame={handleSelectGame}
+          onOpenFullLeaderboard={() => {
+            setSelectedGame(null);
+            setActiveView('leaderboard');
+          }}
+        />
+      )}
 
     </div>
   );
